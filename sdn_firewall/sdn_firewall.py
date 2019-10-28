@@ -31,6 +31,8 @@ from ryu.lib.packet import ether_types
 from ryu.lib.packet import tcp
 from ryu.lib import hub
 
+macDict = {'p': {'m_p1':'00:00:00:00:00:05', 'm_p2':'00:00:00:00:00:06','g_p1':'00:00:00:00:00:01','g_p2':'00:00:00:00:00:02'},
+'s':{'m_s1':'00:00:00:00:00:07','m_s2':'00:00:00:00:00:08','g_s1':'00:00:00:00:00:03','g_s2':'00:00:00:00:00:04'}}
 
 class SimpleSwitch(app_manager.RyuApp):
 	OFP_VERSIONS = [ofproto_v1_0.OFP_VERSION]
@@ -41,6 +43,7 @@ class SimpleSwitch(app_manager.RyuApp):
 		self.datapaths = {}
 		self.data_counter = {}
 		self.monitor_thread = hub.spawn(self._monitor)
+
 
 	# Registring all datapaths for monitor pooling
 	@set_ev_cls(ofp_event.EventOFPStateChange, [MAIN_DISPATCHER, DEAD_DISPATCHER])
@@ -68,6 +71,7 @@ class SimpleSwitch(app_manager.RyuApp):
 			command=ofproto.OFPFC_ADD, idle_timeout=0, hard_timeout=0,
 			priority=ofproto.OFP_DEFAULT_PRIORITY,
 			flags=ofproto.OFPFF_SEND_FLOW_REM, actions=actions)
+
 		datapath.send_msg(mod)
 
 	# Task 3a: Requesting port stats for a specific datapath
@@ -79,7 +83,10 @@ class SimpleSwitch(app_manager.RyuApp):
 
 	# Task 1: Write a function which checks if hosts have permission to communicate with each other
 	# e.g. you can use MAC addresses of source and destination
-	# def check_permission(self,):
+	def check_permission(self, mac_src, mac_dst):
+		if mac_src in macDict['s'].values(): return not (mac_dst in macDict['p'].values())
+		else: return True
+
 
 	# Task 2 - Blocking traffic based on TCP port
 	# Notes: - add flow rules with higher priority to drop the packets
@@ -134,37 +141,46 @@ class SimpleSwitch(app_manager.RyuApp):
 			return
 		dst = eth.dst
 		src = eth.src
-
+		
 	# Task 1: Call the function
+		flag = True
+		if eth.ethertype != ether_types.ETH_TYPE_ARP:
+			if not self.check_permission(src,dst):
+				flag = False
+				self.logger.info('Permission Denied')
+				out_port = ofproto.OFPPC_NO_FWD
+				actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
+				self.add_flow(datapath, msg.in_port, dst, actions)
+
 	# Use implemented function to check if hosts have permission to communicate
+		if flag:
+			dpid = datapath.id
+			self.mac_to_port.setdefault(dpid, {})
 
-		dpid = datapath.id
-		self.mac_to_port.setdefault(dpid, {})
+			# self.logger.info("packet in %s %s %s %s", dpid, src, dst, msg.in_port)
 
-		# self.logger.info("packet in %s %s %s %s", dpid, src, dst, msg.in_port)
+			# learn a mac address to avoid FLOOD next time.
+			self.mac_to_port[dpid][src] = msg.in_port
 
-		# learn a mac address to avoid FLOOD next time.
-		self.mac_to_port[dpid][src] = msg.in_port
+			if dst in self.mac_to_port[dpid]:
+				out_port = self.mac_to_port[dpid][dst]
+			else:
+				out_port = ofproto.OFPP_FLOOD
 
-		if dst in self.mac_to_port[dpid]:
-			out_port = self.mac_to_port[dpid][dst]
-		else:
-			out_port = ofproto.OFPP_FLOOD
+			actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
 
-		actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
+			# install a flow to avoid packet_in next time
+			if out_port != ofproto.OFPP_FLOOD:
+				self.add_flow(datapath, msg.in_port, dst, actions)
 
-		# install a flow to avoid packet_in next time
-		if out_port != ofproto.OFPP_FLOOD:
-			self.add_flow(datapath, msg.in_port, dst, actions)
+			data = None
+			if msg.buffer_id == ofproto.OFP_NO_BUFFER:
+				data = msg.data
 
-		data = None
-		if msg.buffer_id == ofproto.OFP_NO_BUFFER:
-			data = msg.data
-
-		out = datapath.ofproto_parser.OFPPacketOut(
-			datapath=datapath, buffer_id=msg.buffer_id, in_port=msg.in_port,
-			actions=actions, data=data)
-		datapath.send_msg(out)
+			out = datapath.ofproto_parser.OFPPacketOut(
+				datapath=datapath, buffer_id=msg.buffer_id, in_port=msg.in_port,
+				actions=actions, data=data)
+			datapath.send_msg(out)
 
 	@set_ev_cls(ofp_event.EventOFPPortStatus, MAIN_DISPATCHER)
 	def _port_status_handler(self, ev):
