@@ -84,8 +84,13 @@ class SimpleSwitch(app_manager.RyuApp):
 	# Task 1: Write a function which checks if hosts have permission to communicate with each other
 	# e.g. you can use MAC addresses of source and destination
 	def check_permission(self, mac_src, mac_dst):
-		if mac_src in macDict['s'].values(): return not (mac_dst in macDict['p'].values())
-		else: return True
+		# If my src is an s and my dst is a p, it will return FALSE --> meaning no 
+		# if mac_src in macDict['s'].values(): return not (mac_dst in macDict['p'].values())
+		# elif mac_src in macDict['p'].values(): return not (mac_dst in macDict['s'].values())
+		# else: return 
+		
+		return not ((mac_src in macDict['s'].values() and mac_dst in macDict['p'].values() ) or (
+			 		mac_src in macDict['p'].values() and mac_dst in macDict['s'].values()))
 
 
 	# Task 2 - Blocking traffic based on TCP port
@@ -143,17 +148,17 @@ class SimpleSwitch(app_manager.RyuApp):
 		src = eth.src
 		
 	# Task 1: Call the function
-		flag = True
-		if eth.ethertype != ether_types.ETH_TYPE_ARP:
-			if not self.check_permission(src,dst):
-				flag = False
-				self.logger.info('Permission Denied')
-				out_port = ofproto.OFPPC_NO_FWD
-				actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
-				self.add_flow(datapath, msg.in_port, dst, actions)
+		if not self.check_permission(src,dst):
+			self.logger.info('Permission Denied')
+			out_port = ofproto.OFPPC_NO_FWD
+			actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
+			self.add_flow(datapath, msg.in_port, dst, actions)
 
 	# Use implemented function to check if hosts have permission to communicate
-		if flag:
+	
+	# IF WE HAVE TIME LATER:
+	# Implement the code to let ARP messages go through but not IP messages
+		else:
 			dpid = datapath.id
 			self.mac_to_port.setdefault(dpid, {})
 
