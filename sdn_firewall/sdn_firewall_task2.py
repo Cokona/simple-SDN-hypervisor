@@ -72,7 +72,7 @@ class SimpleSwitch(app_manager.RyuApp):
 			priority=ofproto.OFP_DEFAULT_PRIORITY + priority,
 			flags=ofproto.OFPFF_SEND_FLOW_REM, actions=actions, )
 		
-		self.logger.info(ofproto.OFP_DEFAULT_PRIORITY+priority)
+		#self.logger.info(ofproto.OFP_DEFAULT_PRIORITY+priority)
 
 		datapath.send_msg(mod)
 
@@ -95,8 +95,20 @@ class SimpleSwitch(app_manager.RyuApp):
 	# Notes: - add flow rules with higher priority to drop the packets
 	#       - take care of timer of flow installation
 	#       - for traffic differen
-	# def block_traffic(self,msg, port):
-	# 	self.add_flow(datapath, in_port, dst, actions, port)
+	def block_traffic(self, datapath, port, dl_dst):
+		self.logger.info("Blocking port %s on switch %s", port, datapath.id)
+
+		ofproto = datapath.ofproto
+		match = datapath.ofproto_parser.OFPMatch(dl_type=0x0800, nw_proto=6, tp_dst=port, dl_dst=haddr_to_bin(dl_dst))
+		actions = [datapath.ofproto_parser.OFPActionOutput(ofproto.OFPPC_NO_FWD)]
+		mod = datapath.ofproto_parser.OFPFlowMod(
+			datapath=datapath, match=match, cookie=0,
+			command=ofproto.OFPFC_ADD, idle_timeout=0, hard_timeout=0,
+			priority=ofproto.OFP_DEFAULT_PRIORITY+5,
+			flags=ofproto.OFPFF_SEND_FLOW_REM, actions=actions)
+		datapath.send_msg(mod) 
+
+
 
 	# Task 3b - check if some users are consuming more traffic
 	#        - pool data from switches and drop traffic if
@@ -127,7 +139,8 @@ class SimpleSwitch(app_manager.RyuApp):
 		while True:
 			# Request data to pool for each switch
 			# for dp in self.datapaths.values():
-			#    self._request_stats(dp)
+			# 	self._request_stats(dp)
+			
 			hub.sleep(5)
 			timer = timer + 5
 
@@ -162,42 +175,41 @@ class SimpleSwitch(app_manager.RyuApp):
 	# IF WE HAVE TIME LATER:
 	# Implement the code to let ARP messages go through but not IP messages
 		# Use implemented function to check if hosts have permission to communicate
-		else: #Permission Granted
-			# if tp and ((src in macDict['s'].values() and tp.dst_port==80) or (src in macDict['p'].values() and tp.dst_port==22)):
-			# 	# self.logger.info('hello jesus my old friend %s', tp.dst_port)
-			# 	#self.block_traffic(tp.dst_port)
-			# 	out_port = ofproto.OFPPC_NO_FWD
-			# 	actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
-			# 	self.add_flow(datapath, msg.in_port, dst, actions,priority=1,tcp_port=tp.dst_port)
+		else: # Permission Granted from Task 1:
+			dpid = datapath.id
+			self.mac_to_port.setdefault(dpid, {})
+			
+			## TASK 2 - Proactive TCP port block
+			if dst in macDict['s'].values():
+				self.block_traffic(datapath, port=80, dl_dst=dst)
+			elif dst in macDict['p'].values():
+				self.block_traffic(datapath, port=22, dl_dst=dst)
+			###################
+		    # Permission granted form Task 2
+			# self.logger.info("packet in %s %s %s %s", dpid, src, dst, msg.in_port)
 
+			# learn a mac address to avoid FLOOD next time.
+			self.mac_to_port[dpid][src] = msg.in_port
+
+			if dst in self.mac_to_port[dpid]:
+				out_port = self.mac_to_port[dpid][dst]
 			else:
-				dpid = datapath.id
-				self.mac_to_port.setdefault(dpid, {})
+				out_port = ofproto.OFPP_FLOOD
 
-				# self.logger.info("packet in %s %s %s %s", dpid, src, dst, msg.in_port)
+			actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
 
-				# learn a mac address to avoid FLOOD next time.
-				self.mac_to_port[dpid][src] = msg.in_port
+			# install a flow to avoid packet_in next time
+			if out_port != ofproto.OFPP_FLOOD:
+				self.add_flow(datapath, msg.in_port, dst, actions)
 
-				if dst in self.mac_to_port[dpid]:
-					out_port = self.mac_to_port[dpid][dst]
-				else:
-					out_port = ofproto.OFPP_FLOOD
+			data = None
+			if msg.buffer_id == ofproto.OFP_NO_BUFFER:
+				data = msg.data
 
-				actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
-
-				# install a flow to avoid packet_in next time
-				if out_port != ofproto.OFPP_FLOOD:
-					self.add_flow(datapath, msg.in_port, dst, actions)
-
-				data = None
-				if msg.buffer_id == ofproto.OFP_NO_BUFFER:
-					data = msg.data
-
-				out = datapath.ofproto_parser.OFPPacketOut(
-					datapath=datapath, buffer_id=msg.buffer_id, in_port=msg.in_port,
-					actions=actions, data=data)
-				datapath.send_msg(out)
+			out = datapath.ofproto_parser.OFPPacketOut(
+				datapath=datapath, buffer_id=msg.buffer_id, in_port=msg.in_port,
+				actions=actions, data=data)
+			datapath.send_msg(out)
 
 	@set_ev_cls(ofp_event.EventOFPPortStatus, MAIN_DISPATCHER)
 	def _port_status_handler(self, ev):
