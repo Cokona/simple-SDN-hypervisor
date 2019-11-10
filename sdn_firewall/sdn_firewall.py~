@@ -34,12 +34,6 @@ from ryu.lib import hub
 macDict = {'p': {'m_p1':'00:00:00:00:00:05', 'm_p2':'00:00:00:00:00:06','g_p1':'00:00:00:00:00:01','g_p2':'00:00:00:00:00:02'},
 's':{'m_s1':'00:00:00:00:00:07','m_s2':'00:00:00:00:00:08','g_s1':'00:00:00:00:00:03','g_s2':'00:00:00:00:00:04'}}
 
-datadict = {2:{2:0,3:0}, 5:{2:0,3:0}, 3:{2:0,3:0},6:{2:0,3:0}}
-datadict_compare = {2:{2:0,3:0}, 5:{2:0,3:0}, 3:{2:0,3:0},6:{2:0,3:0}}
-
-professors_sw_list = [2,5]
-students_sw_list = [3,6]
-
 class SimpleSwitch(app_manager.RyuApp):
 	OFP_VERSIONS = [ofproto_v1_0.OFP_VERSION]
 
@@ -49,8 +43,6 @@ class SimpleSwitch(app_manager.RyuApp):
 		self.datapaths = {}
 		self.data_counter = {}
 		self.monitor_thread = hub.spawn(self._monitor)
-		self.counter_prof = 0
-		self.counter_student = 0
 
 
 	# Registring all datapaths for monitor pooling
@@ -68,7 +60,7 @@ class SimpleSwitch(app_manager.RyuApp):
 				del self.datapaths[datapath.id]
 				del self.data_counter[datapath.id]
 
-	def add_flow(self, datapath, in_port, dst, actions, priority=0, hard_timeout=0):
+	def add_flow(self, datapath, in_port, dst, actions):
 		ofproto = datapath.ofproto
 
 		match = datapath.ofproto_parser.OFPMatch(
@@ -76,63 +68,31 @@ class SimpleSwitch(app_manager.RyuApp):
 
 		mod = datapath.ofproto_parser.OFPFlowMod(
 			datapath=datapath, match=match, cookie=0,
-			command=ofproto.OFPFC_ADD, idle_timeout=0, hard_timeout=hard_timeout,
-			priority=ofproto.OFP_DEFAULT_PRIORITY + priority,
-			flags=ofproto.OFPFF_SEND_FLOW_REM, actions=actions, )
-		
-		#self.logger.info(ofproto.OFP_DEFAULT_PRIORITY+priority)
+			command=ofproto.OFPFC_ADD, idle_timeout=0, hard_timeout=0,
+			priority=ofproto.OFP_DEFAULT_PRIORITY,
+			flags=ofproto.OFPFF_SEND_FLOW_REM, actions=actions)
 
 		datapath.send_msg(mod)
 
 	# Task 3a: Requesting port stats for a specific datapath
-	def _request_stats(self, datapath, port):
-		self.logger.debug('send stats request: %016x', datapath.id)
-		ofproto = datapath.ofproto
-		parser = datapath.ofproto_parser
-		req = parser.OFPPortStatsRequest(datapath, 0, port)
-		datapath.send_msg(req)
-		#self.logger.info('sent port stats req')
+	# def _request_stats(self, datapath):
+	#    self.logger.debug('send stats request: %016x', datapath.id)
+	#
+	#    datapath.send_msg(req)
+	#    #self.logger.info('sent port stats req')
 
 	# Task 1: Write a function which checks if hosts have permission to communicate with each other
 	# e.g. you can use MAC addresses of source and destination
 	def check_permission(self, mac_src, mac_dst):
-		# If my src is an s and my dst is a p, it will return FALSE --> meaning no 	
-		return not ((mac_src in macDict['s'].values() and mac_dst in macDict['p'].values() ) or (
-			 		mac_src in macDict['p'].values() and mac_dst in macDict['s'].values()))
+		if mac_src in macDict['s'].values(): return not (mac_dst in macDict['p'].values())
+		else: return True
 
 
 	# Task 2 - Blocking traffic based on TCP port
 	# Notes: - add flow rules with higher priority to drop the packets
 	#       - take care of timer of flow installation
 	#       - for traffic differen
-	def block_traffic(self, datapath, port, dl_dst):
-		self.logger.info("Blocking port %s on switch %s", port, datapath.id)
-
-		ofproto = datapath.ofproto
-		match = datapath.ofproto_parser.OFPMatch(dl_type=0x0800, nw_proto=6, tp_dst=port, dl_dst=haddr_to_bin(dl_dst))
-		actions = [datapath.ofproto_parser.OFPActionOutput(ofproto.OFPPC_NO_FWD)]
-		mod = datapath.ofproto_parser.OFPFlowMod(
-			datapath=datapath, match=match, cookie=0,
-			command=ofproto.OFPFC_ADD, idle_timeout=0, hard_timeout=0,
-			priority=ofproto.OFP_DEFAULT_PRIORITY+5,
-			flags=ofproto.OFPFF_SEND_FLOW_REM, actions=actions)
-		datapath.send_msg(mod) 
-
-	# Task3 EXTRA - add_flow code
-	def block_traffic_DATA(self, datapath, in_port, actions=[], priority=0, hard_timeout=0):
-		ofproto = datapath.ofproto
-
-		match = datapath.ofproto_parser.OFPMatch(in_port=in_port)
-
-		mod = datapath.ofproto_parser.OFPFlowMod(
-			datapath=datapath, match=match, cookie=0,
-			command=ofproto.OFPFC_ADD, idle_timeout=0, hard_timeout=hard_timeout,
-			priority=ofproto.OFP_DEFAULT_PRIORITY + priority,
-			flags=ofproto.OFPFF_SEND_FLOW_REM, actions=actions, )
-		
-		#self.logger.info(ofproto.OFP_DEFAULT_PRIORITY+priority)
-
-		datapath.send_msg(mod)
+	# def block_traffic(self,port):
 
 	# Task 3b - check if some users are consuming more traffic
 	#        - pool data from switches and drop traffic if
@@ -155,46 +115,15 @@ class SimpleSwitch(app_manager.RyuApp):
 							stat.rx_packets, stat.rx_bytes, stat.rx_errors,
 							stat.tx_packets, stat.tx_bytes, stat.tx_errors)
 
-		datadict[ev.msg.datapath.id][stat.port_no] = stat.rx_bytes
-		compare_value = datadict[ev.msg.datapath.id][stat.port_no] -  datadict_compare[ev.msg.datapath.id][stat.port_no] 
-		if (ev.msg.datapath.id in students_sw_list) and compare_value >= 10**9:
-			self.logger.info('BLOCKKKK from %d', ev.msg.datapath.id)
-			datadict_compare[ev.msg.datapath.id][stat.port_no] = datadict[ev.msg.datapath.id][stat.port_no] 
-			hard_timeout = 60 - self.counter_student
-			self.block_traffic_DATA(ev.msg.datapath, stat.port_no, priority=10, hard_timeout=hard_timeout)
-		elif  (ev.msg.datapath.id in professors_sw_list) and compare_value >= 5*(10**9):
-			self.logger.info('BLOCKKKK from %d', ev.msg.datapath.id)
-			datadict_compare[ev.msg.datapath.id][stat.port_no] = datadict[ev.msg.datapath.id][stat.port_no] 
-			hard_timeout = 120 - self.counter_prof
-			self.block_traffic_DATA(ev.msg.datapath, stat.port_no, priority=10, hard_timeout=hard_timeout)
-			
-		
-
 	# Task 2/3 - Write a function that does:
 	#         - Periodically every 5 seconds requests port stats for monitoring
 	#         - Block traffic when needed
 	def _monitor(self):
 		timer = 0
 		while True:
-			# Request data to pool for each switch		
-			self.counter_prof += 5
-			self.counter_student += 5
-			if self.counter_prof == 120:
-				self.logger.info('Reset 2-minute-counter for professors.')
-				self.counter_prof = 0
-				datadict_compare.update({2:datadict[2],5:datadict[5]})
-			if self.counter_student == 60:
-				self.logger.info('Reset 1-minute-counter for students.')
-				self.counter_student= 0
-				datadict_compare.update({3:datadict[3],6:datadict[6]})
-				#self.logger.info(datadict_compare)
-
-			for dp in self.datapaths.values():
-				#Request stats
-				if dp.id in professors_sw_list or dp.id in students_sw_list:
-					self._request_stats(dp, 2)
-					self._request_stats(dp, 3)
-				
+			# Request data to pool for each switch
+			# for dp in self.datapaths.values():
+			#    self._request_stats(dp)
 			hub.sleep(5)
 			timer = timer + 5
 
@@ -206,12 +135,6 @@ class SimpleSwitch(app_manager.RyuApp):
 
 		pkt = packet.Packet(msg.data)
 		eth = pkt.get_protocol(ethernet.ethernet)
-		
-		if pkt.get_protocol(tcp.tcp):
-			tp = pkt.get_protocol(tcp.tcp)
-			# self.logger.info(tp.dst_port)
-		else:
-			tp = None
 
 		if eth.ethertype == ether_types.ETH_TYPE_LLDP:
 			# ignore lldp packet
@@ -220,26 +143,20 @@ class SimpleSwitch(app_manager.RyuApp):
 		src = eth.src
 		
 	# Task 1: Call the function
-		if not self.check_permission(src,dst):
-			self.logger.info('Permission Denied')
-			out_port = ofproto.OFPPC_NO_FWD
-			actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
-			self.add_flow(datapath, msg.in_port, dst, actions)
-	
-	# IF WE HAVE TIME LATER:
-	# Implement the code to let ARP messages go through but not IP messages
-		# Use implemented function to check if hosts have permission to communicate
-		else: # Permission Granted from Task 1:
+		flag = True
+		if eth.ethertype != ether_types.ETH_TYPE_ARP:
+			if not self.check_permission(src,dst):
+				flag = False
+				self.logger.info('Permission Denied')
+				out_port = ofproto.OFPPC_NO_FWD
+				actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
+				self.add_flow(datapath, msg.in_port, dst, actions)
+
+	# Use implemented function to check if hosts have permission to communicate
+		if flag:
 			dpid = datapath.id
 			self.mac_to_port.setdefault(dpid, {})
-			
-			## TASK 2 - Proactive TCP port block
-			if dst in macDict['s'].values():
-				self.block_traffic(datapath, port=80, dl_dst=dst)
-			elif dst in macDict['p'].values():
-				self.block_traffic(datapath, port=22, dl_dst=dst)
-			###################
-		    # Permission granted form Task 2
+
 			# self.logger.info("packet in %s %s %s %s", dpid, src, dst, msg.in_port)
 
 			# learn a mac address to avoid FLOOD next time.
