@@ -77,11 +77,11 @@ class SimpleSwitch(app_manager.RyuApp):
 		datapath.send_msg(mod)
 
 	# Task 3a: Requesting port stats for a specific datapath
-	# def _request_stats(self, datapath):
-	#    self.logger.debug('send stats request: %016x', datapath.id)
-	#
-	#    datapath.send_msg(req)
-	#    #self.logger.info('sent port stats req')
+	def _request_stats(self, datapath):
+		self.logger.debug('send stats request: %016x', datapath.id)
+		req = parser.OFPPortStatsRequest(datapath, 0)
+		datapath.send_msg(req)
+		self.logger.info('sent port stats req')
 
 	# Task 1: Write a function which checks if hosts have permission to communicate with each other
 	# e.g. you can use MAC addresses of source and destination
@@ -138,8 +138,8 @@ class SimpleSwitch(app_manager.RyuApp):
 		timer = 0
 		while True:
 			# Request data to pool for each switch
-			# for dp in self.datapaths.values():
-			# 	self._request_stats(dp)
+			for dp in self.datapaths.values():
+				self._request_stats(dp)
 			
 			hub.sleep(5)
 			timer = timer + 5
