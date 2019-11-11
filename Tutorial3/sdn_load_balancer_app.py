@@ -25,6 +25,8 @@ FLOW_DEFAULT_PRIO_FORWARDING = 10
 TABLE_ROUTING = 0
 FLOW_DEFAULT_IDLE_TIMEOUT = 2  # Idle Timeout value for flows
 
+hostDict = {'00:00:00:00:00:01': 'g_p1', '00:00:00:00:00:02': 'g_p2', '00:00:00:00:00:03': 'g_s1', '00:00:00:00:00:04': 'g_s2', 
+            '00:00:00:00:00:05': 'm_p1', '00:00:00:00:00:06': 'm_p2', '00:00:00:00:00:07': 'm_s1', '00:00:00:00:00:08': 'm_s2'}
 
 class PathCalculationError(Exception):
     pass
@@ -60,19 +62,32 @@ class LoadBalancer(app_manager.RyuApp):
 
     @set_ev_cls(topo_event.EventHostAdd)
     def new_host_handler(self, ev):
+        '''
+        host = ['port', 'mac', 'ipv4', 'ipv6']
+        '''
         host = ev.host
         self.logger.info("New %s detected", host)
+        # self.logger.info("LOOOOOKKKK  -  " + str(host.__dict__.keys()))
+
         # Task 1: Add the new host with its MAC-address as a node to the graph.
         # Add also appropriate edges to connect it to the next switch
-
-        # self.graph.add_node()
+        if host.mac in hostDict.keys():
+            self.graph.add_node(hostDict[host.mac])
 
     @set_ev_cls(topo_event.EventSwitchEnter)
     def new_switch_handler(self, ev):
+        '''
+        switch.dp = ['ofproto', 'ofproto_parser', 'socket', 'address', 'is_active', 'send_q', '_send_q_sem', 
+                    'echo_request_interval', 'max_unreplied_echo_requests', 'unreplied_echo_requests', 'xid', 
+                    'id', '_ports', 'flow_format', 'ofp_brick', 'state', 'ports']
+        switch.ports = LIST OF: ['dpid', '_ofproto', '_config', '_state', 'port_no', 'hw_addr', 'name']
+        '''
         switch = ev.switch
+        dp = switch.dp
+        ports = switch.ports
         self.logger.info("New %s detected", switch)
         #  Task 1: Add the new switch as a node to the graph.
-        # self.graph.add_node(   )
+        self.graph.add_node('s' + str(dp.id))
 
     def __get_port_speed(self, dpid, port_no, switches_list):
         for switch in switches_list:
