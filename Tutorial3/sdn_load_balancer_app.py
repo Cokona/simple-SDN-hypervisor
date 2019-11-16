@@ -2,6 +2,7 @@
 from operator import attrgetter
 import networkx as nx
 import time
+import matplotlib.pyplot as plt
 
 from ryu import cfg
 from ryu.base import app_manager
@@ -47,10 +48,11 @@ class LoadBalancer(app_manager.RyuApp):
         self.mac_to_port = {}
         self.ip_to_mac = {}
         # Variables for the network topology
-        self.graph = nx.DiGraph()
+        self.graph = nx.Graph()
         self.hosts = []
         self.links = []
         self.switches = []
+        self.edges_saved = []
 
         self.arp_checker = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: None)))
 
@@ -73,6 +75,7 @@ class LoadBalancer(app_manager.RyuApp):
         # Add also appropriate edges to connect it to the next switch
         if host.mac in hostDict.keys():
             self.graph.add_node(hostDict[host.mac])
+            self.graph.add_edge(hostDict[host.mac],'s' + str(host.port.dpid))
 
     @set_ev_cls(topo_event.EventSwitchEnter)
     def new_switch_handler(self, ev):
@@ -98,11 +101,18 @@ class LoadBalancer(app_manager.RyuApp):
 
     @set_ev_cls(topo_event.EventLinkAdd)
     def new_link_handler(self, ev):
+        '''
+        link = ['src', 'dst']
+        link.src = ['dpid', '_ofproto', '_config', '_state', 'port_no', 'hw_addr', 'name']
+        '''
         link = ev.link
         self.logger.info("New %s detected", link)
         #  Task 1: Add the new link as an edge to the graph
         # Make sure that you do not add it twice.
-        # self.graph.add_edge()
+        if ('s' + str(link.src.dpid), 's' + str(link.dst.dpid)) not in self.edges_saved:
+            self.edges_saved.append(('s' + str(link.src.dpid), 's' + str(link.dst.dpid)))
+            self.edges_saved.append(('s' + str(link.dst.dpid), 's' + str(link.src.dpid)))
+            self.graph.add_edge('s' + str(link.src.dpid),'s' + str(link.dst.dpid))
 
     def _reset_arp(self):
         hub.sleep(2)
@@ -120,6 +130,9 @@ class LoadBalancer(app_manager.RyuApp):
         while True:
             self.logger.info("Nodes: %s" % self.graph.nodes)
             self.logger.info("Edges: %s" % self.graph.edges)
+            nx.draw_networkx(self.graph,with_labels=True)
+            plt.draw()
+            plt.show()
             hub.sleep(10)
 
     def _poll_link_load(self):
