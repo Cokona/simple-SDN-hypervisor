@@ -24,7 +24,8 @@ from collections import defaultdict
 CONF = cfg.CONF
 FLOW_DEFAULT_PRIO_FORWARDING = 10
 TABLE_ROUTING = 0
-FLOW_DEFAULT_IDLE_TIMEOUT = 2  # Idle Timeout value for flows
+FLOW_DEFAULT_IDLE_TIMEOUT = 2   # Idle Timeout value for flows
+MAX_LINK_CAPACITY = 1000        # Max link capacity 1 Gbps
 
 hostDict = {'00:00:00:00:00:01': 'g_p1', '00:00:00:00:00:02': 'g_p2', '00:00:00:00:00:03': 'g_s1', '00:00:00:00:00:04': 'g_s2', 
             '00:00:00:00:00:05': 'm_p1', '00:00:00:00:00:06': 'm_p2', '00:00:00:00:00:07': 'm_s1', '00:00:00:00:00:08': 'm_s2'}
@@ -48,7 +49,7 @@ class LoadBalancer(app_manager.RyuApp):
         self.mac_to_port = {}
         self.ip_to_mac = {}
         # Variables for the network topology
-        self.graph = nx.DiGraph()
+        self.graph = nx.Graph()
         self.hosts = []
         self.links = []
         self.switches = {}
@@ -75,9 +76,9 @@ class LoadBalancer(app_manager.RyuApp):
         # Add also appropriate edges to connect it to the next switch
         if host.mac in hostDict.keys():
             self.graph.add_node(hostDict[host.mac])
-            self.graph.add_edge(hostDict[host.mac],'s' + str(host.port.dpid), ingress=host.port.port_no, outgress=1)
-            self.graph.add_edge('s' + str(host.port.dpid),hostDict[host.mac], outgress=host.port.port_no, ingress=1)
-
+            current_switch = 's' + str(host.port.dpid)
+            self.graph.add_edge(hostDict[host.mac],current_switch, ports= {hostDict[host.mac]: 1, current_switch: host.port.port_no}, 
+                                time=time.time(), bytes=0, utilization=0)
 
     @set_ev_cls(topo_event.EventSwitchEnter)
     def new_switch_handler(self, ev):
@@ -112,11 +113,10 @@ class LoadBalancer(app_manager.RyuApp):
         # self.logger.info("New %s detected", link)
         #  Task 1: Add the new link as an edge to the graph
         # Make sure that you do not add it twice.
-        if ('s' + str(link.src.dpid), 's' + str(link.dst.dpid)) not in self.edges_saved:
-            self.edges_saved.append(('s' + str(link.src.dpid), 's' + str(link.dst.dpid)))
-            # self.edges_saved.append(('s' + str(link.dst.dpid), 's' + str(link.src.dpid)))
-            self.graph.add_edge('s' + str(link.src.dpid),'s' + str(link.dst.dpid), outgress=link.src.port_no, ingress=link.dst.port_no)
-            # self.logger.info("LOOKK At mi6 %d", self.graph['s' + str(link.src.dpid)]['s' + str(link.dst.dpid)]['tail'])
+        switch1 = 's' + str(link.src.dpid)
+        switch2 = 's' + str(link.dst.dpid)  
+        self.graph.add_edge(switch1, switch2, ports={switch1: link.src.port_no, switch2: link.dst.port_no},
+         time=time.time(), bytes=0, utilization=0)
 
     def _reset_arp(self):
         hub.sleep(2)
@@ -137,7 +137,9 @@ class LoadBalancer(app_manager.RyuApp):
             # nx.draw_networkx(self.graph,with_labels=True)
             # plt.draw()
             # plt.show()
-            hub.sleep(10)
+            # for (u, v, wt) in self.graph.edges.data('utilization'):
+            #     self.logger.info("Edge %s utilization %s" % ((u,v), wt))
+            hub.sleep(2)
 
     def _poll_link_load(self):
         """
@@ -153,7 +155,7 @@ class LoadBalancer(app_manager.RyuApp):
         self.logger.debug('send stats request: %016x', datapath.id)
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
-
+        
         req = parser.OFPPortStatsRequest(datapath, 0, ofproto.OFPP_NONE)
         datapath.send_msg(req)
 
@@ -163,18 +165,29 @@ class LoadBalancer(app_manager.RyuApp):
         Calculates the link load based on the received port statistics. The values are stored as an attribute of the
         edges in the networkx DiGraph. [Bytes/Sec]/[Max Link Speed in Bytes]
         Args:
-            ev:
+            ev:              ['timestamp', 'msg']
+            ev.msg:          ['datapath', 'version', 'msg_type', 'msg_len', 'xid', 'buf', 'type', 'flags', 'body']
+            ev.msg.datapath: ['ofproto', 'ofproto_parser', 'socket', 'address', 'is_active', 'send_q', '_send_q_sem', 'echo_request_interval', 
+                             'max_unreplied_echo_requests', 'unreplied_echo_requests', 'xid', 'id', '_ports', 'flow_format', 'ofp_brick', 'state', 'ports']
         Returns
-
         """
         body = ev.msg.body
         dpid = ev.msg.datapath.id
-        #self.logger.info('From DP: %d came the message : %s', dpid, body)
+        # self.logger.info('From DP: %d came the message : %s', dpid, body)
         for stat in sorted(body, key=attrgetter('port_no')):
             num_bytes = stat.rx_bytes + stat.tx_bytes
             new_time = time.time()
             # TODO Task 3: Update the load value of the corresponding edge in self.graph
-
+            current_switch = 's' + str(dpid)
+            # self.logger.info(self.graph.edges(current_switch))
+            for (u, v) in self.graph.edges(current_switch):
+                if self.graph[current_switch][v]['ports'][current_switch] == stat.port_no:
+                    utilization = ((num_bytes - self.graph[current_switch][v]['bytes']) / (new_time - self.graph[current_switch][v]['time'])) / MAX_LINK_CAPACITY
+                    self.graph[current_switch][v]['utilization'] = utilization
+                    self.graph[current_switch][v]['time'] = new_time
+                    self.graph[current_switch][v]['bytes'] = num_bytes
+                    return
+                    
     def calculate_path_to_server(self, src, dst, balanced=False):
         """
         Returns the path of the flow
@@ -194,25 +207,26 @@ class LoadBalancer(app_manager.RyuApp):
         dst = hostDict[str(dst)]
 
         path_out = []
+        # TODO Task 3: Implement load balanced routing
         if balanced:
-            # TODO Task 3: Implement load balanced routing
-            raise NotImplementedError
+            weight = 'utilization'
         else:
-            # Task 2: Determine path to destination using nx.shortest_path.
-            try:
-                path_tmp = nx.shortest_path(self.graph, src, dst, weight=None)  # weight = 1, Path weight = # Hops
-                self.logger.info('A Path was found!! : %s', path_tmp)
-            except:
-                self.logger.info("Path not found")
-                path_tmp = []
-            path_index = 0
-            for dp_index in range(len(path_tmp)-1):
-                # TODO Task 2: Convert to an appropriate representation
-                src_dp = path_tmp[dp_index]
-                dst_dp = path_tmp[dp_index+1]
-                out_port = self.graph[src_dp][dst_dp]['outgress']
-                self.logger.info("SRC: %s OUT_PORT: %s\nDST: %s " % (src_dp, out_port, dst_dp))
-                path_out.append({"dp":src_dp, "port":out_port})
+            weight = 1
+        # Task 2: Determine path to destination using nx.shortest_path.
+        try:
+            path_tmp = nx.shortest_path(self.graph, src, dst, weight=weight)  # weight = 1, Path weight = # Hops
+            self.logger.info('A Path was found!! : %s', path_tmp)             # DEBUG
+        except:
+            self.logger.info("Path not found")
+            path_tmp = []
+        path_index = 0
+        for dp_index in range(len(path_tmp)-1):
+            # TODO Task 2: Convert to an appropriate representation
+            src_dp = path_tmp[dp_index]
+            dst_dp = path_tmp[dp_index+1]
+            out_port = self.graph[src_dp][dst_dp]['ports'][src_dp]
+            # self.logger.info("SRC: %s OUT_PORT: %s\nDST: %s " % (src_dp, out_port, dst_dp))
+            path_out.append({"dp":src_dp, "port":out_port})
         self.logger.debug("Path: %s" % path_out)
         if len(path_out) == 0:
             #raise PathCalculationError()
@@ -298,18 +312,18 @@ class LoadBalancer(app_manager.RyuApp):
         eth_dst_in = eth.dst
         net_src = ipv4_data.src
         net_dst = ipv4_data.dst
-        self.logger.info(self.ip_to_mac.get(net_dst, eth_dst_in))
+        # self.logger.info(self.ip_to_mac.get(net_dst, eth_dst_in))         # DEBUG
         # Get the path to the server
         routing_path = self.calculate_path_to_server(
-            datapath.id, self.ip_to_mac.get(net_dst, eth_dst_in), balanced=False
+            datapath.id, self.ip_to_mac.get(net_dst, eth_dst_in), balanced=True
         )
 
         if routing_path is None:
             self.logger.info('There is No ROUTING_PATH')
             return
 
-        self.logger.info("Calculated path from %s-%s: %s" % (datapath.id, self.ip_to_mac.get(net_dst, eth_dst_in),
-                                                             routing_path))
+        # self.logger.info("Calculated path from %s-%s: %s" % (datapath.id, self.ip_to_mac.get(net_dst, eth_dst_in),
+                                                            #  routing_path))
         self.add_flow_for_path(parser, routing_path, pkt, net_src, net_dst, eth.src, eth.dst, in_port)
         self.logger.debug("Installed flow entries FORWARDING (pub->priv)")
 
