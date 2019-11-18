@@ -24,7 +24,7 @@ from collections import defaultdict
 CONF = cfg.CONF
 FLOW_DEFAULT_PRIO_FORWARDING = 10
 TABLE_ROUTING = 0
-FLOW_DEFAULT_IDLE_TIMEOUT = 2   # Idle Timeout value for flows
+FLOW_DEFAULT_IDLE_TIMEOUT = 10   # Idle Timeout value for flows
 MAX_LINK_CAPACITY = 1000        # Max link capacity 1 Gbps
 
 hostDict = {'00:00:00:00:00:01': 'g_p1', '00:00:00:00:00:02': 'g_p2', '00:00:00:00:00:03': 'g_s1', '00:00:00:00:00:04': 'g_s2', 
@@ -211,7 +211,7 @@ class LoadBalancer(app_manager.RyuApp):
         if balanced:
             weight = 'utilization'
         else:
-            weight = 1
+            weight = None
         # Task 2: Determine path to destination using nx.shortest_path.
         try:
             path_tmp = nx.shortest_path(self.graph, src, dst, weight=weight)  # weight = 1, Path weight = # Hops
@@ -227,7 +227,7 @@ class LoadBalancer(app_manager.RyuApp):
             out_port = self.graph[src_dp][dst_dp]['ports'][src_dp]
             # self.logger.info("SRC: %s OUT_PORT: %s\nDST: %s " % (src_dp, out_port, dst_dp))
             path_out.append({"dp":src_dp, "port":out_port})
-        self.logger.debug("Path: %s" % path_out)
+        self.logger.info("Path: %s" % path_out)
         if len(path_out) == 0:
             #raise PathCalculationError()
             self.logger.info('Here was the problem')
@@ -258,9 +258,10 @@ class LoadBalancer(app_manager.RyuApp):
             mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
                                     idle_timeout=idle_timeout,
                                     match=match, actions=actions)
+        self.logger.info('DPID: %s, match: %s', datapath.id, match)
         datapath.send_msg(mod)
 
-    def add_flow_for_path(self, parser, routing_path, pkt, nw_src, nw_dest, dl_src, dl_dst, in_port):
+    def add_flow_for_path(self, parser, routing_path, pkt, nw_src, nw_dest, dl_src, dl_dst, in_port, tp=None):
         """
         Installs rules on all switches on the given path to forward the flow
         Args:
@@ -282,12 +283,19 @@ class LoadBalancer(app_manager.RyuApp):
         for hop in routing_path:  # The switches between the incoming switch and the server
             # self.logger.debug("previous port: %s, this hop dp: %s" % (port_previous_hop, hop['dp'].id))
             # TODO Task 2: Determine match and actions
-            match = parser.OFPMatch(dl_src=haddr_to_bin(dl_src), dl_dst=haddr_to_bin(dl_dst))
+            if tp:
+                # match = parser.OFPMatch(dl_src=haddr_to_bin(dl_src), dl_dst=haddr_to_bin(dl_dst),
+                #                         tp_dst=tcp_data.dst_port, dl_type=0x0800, nw_proto=6)
+                 match = parser.OFPMatch(nw_src=nw_src, nw_dst=nw_dest, dl_src=haddr_to_bin(dl_src),
+                                        tp_dst=tcp_data.dst_port, dl_type=0x0800, nw_proto=6)
+            else: 
+                match = parser.OFPMatch(dl_src=haddr_to_bin(dl_src), dl_dst=haddr_to_bin(dl_dst))
             actions = [parser.OFPActionOutput(hop['port'])]
-            self.add_flow(self.switches[hop['dp']], FLOW_DEFAULT_PRIO_FORWARDING, match, actions, None, FLOW_DEFAULT_IDLE_TIMEOUT)
+            # self.logger.info('\n%s \n%s \n%s\n',self.switches[hop['dp']].id,match, actions)
+            self.add_flow(self.switches[hop['dp']], FLOW_DEFAULT_PRIO_FORWARDING+1, match, actions, None, FLOW_DEFAULT_IDLE_TIMEOUT)
             port_previous_hop = hop['port']
 
-    def _handle_ipv4(self, datapath, in_port, pkt):
+    def _handle_ipv4(self, datapath, in_port, pkt, tp=None):
         """
         Handles an IPv4 packet. Calculates the route and installs the appropriate rules. Finally, the packet is sent
         out at the target switch and port.
@@ -324,8 +332,12 @@ class LoadBalancer(app_manager.RyuApp):
 
         # self.logger.info("Calculated path from %s-%s: %s" % (datapath.id, self.ip_to_mac.get(net_dst, eth_dst_in),
                                                             #  routing_path))
-        self.add_flow_for_path(parser, routing_path, pkt, net_src, net_dst, eth.src, eth.dst, in_port)
-        self.logger.debug("Installed flow entries FORWARDING (pub->priv)")
+        if tp:
+            self.add_flow_for_path(parser, routing_path, pkt, net_src, net_dst, eth.src, eth.dst, in_port, tp)
+            self.logger.debug("Installed flow entries FORWARDING (pub->priv)")
+        else:
+            self.add_flow_for_path(parser, routing_path, pkt, net_src, net_dst, eth.src, eth.dst, in_port)
+            self.logger.debug("Installed flow entries FORWARDING (pub->priv)")
 
         actions_po = [parser.OFPActionOutput(routing_path[-1]["port"], 0)]
         out_po = parser.OFPPacketOut(datapath=self.switches[routing_path[-1]['dp']],
@@ -419,11 +431,16 @@ class LoadBalancer(app_manager.RyuApp):
         in_port = msg.in_port
 
         pkt = packet.Packet(msg.data)
-
         eth = pkt.get_protocol(ethernet.ethernet)
         if eth.ethertype == ether_types.ETH_TYPE_LLDP:
             # ignore lldp packet
             return
+
+        if pkt.get_protocol(tcp.tcp):
+            tp = pkt.get_protocol(tcp.tcp)
+			# self.logger.info(tp.dst_port)
+        else:
+            tp = None
 
         arp_header = pkt.get_protocol(arp.arp)
         ipv4_header = pkt.get_protocol(ipv4.ipv4)
@@ -446,7 +463,7 @@ class LoadBalancer(app_manager.RyuApp):
                 self.logger.debug("Forwarding ARP to learn address, but dropping all consecutive packages.")
                 self._handle_simple_switch(datapath, in_port, pkt, msg.buffer_id, eth_dst)
         elif ipv4_header:  # IP packet -> load balanced routing
-            self._handle_ipv4(datapath, in_port, pkt)
+            self._handle_ipv4(datapath, in_port, pkt, tp)
         elif ipv6_header:
             return
         else:
