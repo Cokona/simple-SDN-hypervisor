@@ -2,7 +2,6 @@
 from operator import attrgetter
 import networkx as nx
 import time
-import matplotlib.pyplot as plt
 
 from ryu import cfg
 from ryu.base import app_manager
@@ -24,12 +23,8 @@ from collections import defaultdict
 CONF = cfg.CONF
 FLOW_DEFAULT_PRIO_FORWARDING = 10
 TABLE_ROUTING = 0
-FLOW_DEFAULT_IDLE_TIMEOUT = 2       # Idle Timeout value for flows
-FLOW_DEFAULT_IDLE_TIMEOUT_IP = 10   # Idle Timeout value for Ip paths
-MAX_LINK_CAPACITY = 1000            # Max link capacity 1 Gbps
+FLOW_DEFAULT_IDLE_TIMEOUT = 10  # Idle Timeout value for flows
 
-hostDict = {'00:00:00:00:00:01': 'g_p1', '00:00:00:00:00:02': 'g_p2', '00:00:00:00:00:03': 'g_s1', '00:00:00:00:00:04': 'g_s2', 
-            '00:00:00:00:00:05': 'm_p1', '00:00:00:00:00:06': 'm_p2', '00:00:00:00:00:07': 'm_s1', '00:00:00:00:00:08': 'm_s2'}
 
 class PathCalculationError(Exception):
     pass
@@ -53,8 +48,7 @@ class LoadBalancer(app_manager.RyuApp):
         self.graph = nx.DiGraph()
         self.hosts = []
         self.links = []
-        self.switches = {}
-        self.edges_saved = []
+        self.switches = []
 
         self.arp_checker = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: None)))
 
@@ -66,38 +60,32 @@ class LoadBalancer(app_manager.RyuApp):
 
     @set_ev_cls(topo_event.EventHostAdd)
     def new_host_handler(self, ev):
-        '''
-        host = ['port', 'mac', 'ipv4', 'ipv6']
-        '''
         host = ev.host
         # self.logger.info("New %s detected", host)
-        # self.logger.info("LOOOOOKKKK  -  " + str(host.__dict__.keys()))
-
         # Task 1: Add the new host with its MAC-address as a node to the graph.
         # Add also appropriate edges to connect it to the next switch
-        if host.mac in hostDict.keys():
-            self.graph.add_node(hostDict[host.mac])
-            current_switch = 's' + str(host.port.dpid)
-            self.graph.add_edge(hostDict[host.mac],current_switch, ports= {hostDict[host.mac]: 1, current_switch: host.port.port_no}, 
-                                time=time.time(), bytes=0, utilization=0)
-            self.graph.add_edge(current_switch, hostDict[host.mac], ports= {hostDict[host.mac]: 1, current_switch: host.port.port_no}, 
-                                time=time.time(), bytes=0, utilization=0)
+
+        # self.graph.add_node()
+        self.graph.add_node(
+            host.mac,
+            **{
+                'type': 'client'
+            }
+        )
+        if (host.mac, host.port.dpid) not in self.graph.edges:
+            self.graph.add_edge(host.mac, host.port.dpid, **{'link_load': 0.0, 'time': 0.0,
+                                                             'old_num_bytes': 0, 'curr_speed': 1000000})
+            self.graph.add_edge(host.port.dpid, host.mac, **{'port': host.port.port_no, 'link_load': 0.0, 'time': 0.0,
+                                                             'old_num_bytes': 0, 'curr_speed': 1000000})
 
     @set_ev_cls(topo_event.EventSwitchEnter)
     def new_switch_handler(self, ev):
-        '''
-        switch.dp = ['ofproto', 'ofproto_parser', 'socket', 'address', 'is_active', 'send_q', '_send_q_sem', 
-                    'echo_request_interval', 'max_unreplied_echo_requests', 'unreplied_echo_requests', 'xid', 
-                    'id', '_ports', 'flow_format', 'ofp_brick', 'state', 'ports']
-        switch.ports = LIST OF: ['dpid', '_ofproto', '_config', '_state', 'port_no', 'hw_addr', 'name']
-        '''
         switch = ev.switch
-        dp = switch.dp
-        ports = switch.ports
+        self.switches.append(switch)
         # self.logger.info("New %s detected", switch)
         #  Task 1: Add the new switch as a node to the graph.
-        self.graph.add_node('s' + str(dp.id))
-        self.switches['s' + str(dp.id)] = switch.dp
+        # self.graph.add_node(   )
+        self.graph.add_node(switch.dp.id, **{'type': 'sw'})
 
     def __get_port_speed(self, dpid, port_no, switches_list):
         for switch in switches_list:
@@ -108,18 +96,20 @@ class LoadBalancer(app_manager.RyuApp):
 
     @set_ev_cls(topo_event.EventLinkAdd)
     def new_link_handler(self, ev):
-        '''
-        link = ['src', 'dst']
-        link.src = ['dpid', '_ofproto', '_config', '_state', 'port_no', 'hw_addr', 'name']
-        '''
         link = ev.link
         # self.logger.info("New %s detected", link)
         #  Task 1: Add the new link as an edge to the graph
         # Make sure that you do not add it twice.
-        switch1 = 's' + str(link.src.dpid)
-        switch2 = 's' + str(link.dst.dpid)  
-        self.graph.add_edge(switch1, switch2, ports={switch1: link.src.port_no, switch2: link.dst.port_no},
-         time=time.time(), bytes=0, utilization=0)
+        # self.graph.add_edge()
+        if (link.src.dpid, link.dst.dpid) not in self.graph.edges:
+            self.graph.add_edge(link.src.dpid, link.dst.dpid,
+                                **{'port': link.src.port_no,
+                                   'link_load': 0.0,
+                                   'time': 0.0,
+                                   'old_num_bytes': 0,
+                                   'curr_speed': self.__get_port_speed(link.src.dpid, link.src.port_no, self.switches)
+                                   }
+                                )
 
     def _reset_arp(self):
         hub.sleep(2)
@@ -137,12 +127,7 @@ class LoadBalancer(app_manager.RyuApp):
         while True:
             # self.logger.info("Nodes: %s" % self.graph.nodes)
             # self.logger.info("Edges: %s" % self.graph.edges)
-            # nx.draw_networkx(self.graph,with_labels=True)
-            # plt.draw()
-            # plt.show()
-            # for (u, v, wt) in self.graph.edges.data('utilization'):
-            #     self.logger.info("Edge %s utilization %s" % ((u,v), wt))
-            hub.sleep(2)
+            hub.sleep(10)
 
     def _poll_link_load(self):
         """
@@ -150,15 +135,15 @@ class LoadBalancer(app_manager.RyuApp):
         :return:
         """
         while True:
-            for sw in self.switches.keys():
-                self._request_port_stats(self.switches[sw])
+            for sw in self.switches:
+                self._request_port_stats(sw.dp)
             hub.sleep(1)
 
     def _request_port_stats(self, datapath):
-        self.logger.debug('send stats request: %016x', datapath.id)
+        # self.logger.info('send stats request: %016x', datapath.id)
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
-        
+
         req = parser.OFPPortStatsRequest(datapath, 0, ofproto.OFPP_NONE)
         datapath.send_msg(req)
 
@@ -168,29 +153,43 @@ class LoadBalancer(app_manager.RyuApp):
         Calculates the link load based on the received port statistics. The values are stored as an attribute of the
         edges in the networkx DiGraph. [Bytes/Sec]/[Max Link Speed in Bytes]
         Args:
-            ev:              ['timestamp', 'msg']
-            ev.msg:          ['datapath', 'version', 'msg_type', 'msg_len', 'xid', 'buf', 'type', 'flags', 'body']
-            ev.msg.datapath: ['ofproto', 'ofproto_parser', 'socket', 'address', 'is_active', 'send_q', '_send_q_sem', 'echo_request_interval', 
-                             'max_unreplied_echo_requests', 'unreplied_echo_requests', 'xid', 'id', '_ports', 'flow_format', 'ofp_brick', 'state', 'ports']
+            ev:
         Returns
+
         """
         body = ev.msg.body
         dpid = ev.msg.datapath.id
-        # self.logger.info('From DP: %d came the message : %s', dpid, body)
+
+        out_str = ""
         for stat in sorted(body, key=attrgetter('port_no')):
             num_bytes = stat.rx_bytes + stat.tx_bytes
             new_time = time.time()
             # TODO Task 3: Update the load value of the corresponding edge in self.graph
-            current_switch = 's' + str(dpid)
-            # self.logger.info(self.graph.edges(current_switch))
-            for (u, v) in self.graph.edges(current_switch):
-                if self.graph[current_switch][v]['ports'][current_switch] == stat.port_no:
-                    utilization = ((num_bytes - self.graph[current_switch][v]['bytes']) / (new_time - self.graph[current_switch][v]['time'])) + 1 
-                    self.graph[current_switch][v]['utilization'] = utilization
-                    self.graph[current_switch][v]['time'] = new_time
-                    self.graph[current_switch][v]['bytes'] = num_bytes
-                    return
-                    
+
+
+            for edge_candidate in self.graph[dpid]:
+                # self.logger.debug("%s %s %s" % (dpid, edge_candidate, self.graph[dpid][edge_candidate]))
+                try:
+                    if self.graph[dpid][edge_candidate]['port'] == stat.port_no:
+                        delta_t = new_time - self.graph[dpid][edge_candidate]['time']
+                        delta_bytes = num_bytes - self.graph[dpid][edge_candidate]['old_num_bytes']
+                        speed = self.graph[dpid][edge_candidate]['curr_speed']
+                        # load in bytes/sec
+                        self.graph[dpid][edge_candidate]['link_load'] = 1.0 * delta_bytes / delta_t + 1
+                        self.graph[dpid][edge_candidate]['time'] = new_time
+                        self.graph[dpid][edge_candidate]['old_num_bytes'] = num_bytes
+
+                        out_str += '%8x %s \t' % (stat.port_no, self.graph[dpid][edge_candidate]['link_load'])
+                        break
+                except KeyError:
+                    pass
+                    # self.logger.info(stat)
+        # self.logger.info('datapath %s' % dpid)
+        # self.logger.info('---------------- -------- '
+        #                  '-------- -------- -------- '
+        #                  '-------- -------- --------')
+        # self.logger.info(out_str)
+
     def calculate_path_to_server(self, src, dst, balanced=False):
         """
         Returns the path of the flow
@@ -201,39 +200,31 @@ class LoadBalancer(app_manager.RyuApp):
         Returns:
              list of hops (dict of dpid and outport) {'dp': XXX, 'port': YYY}
         """
-        if dst == "ff:ff:ff:ff:ff:ff":
-            self.logger.info('THIS IS A BROADCAST AND PATH RETURNS NONE')
-            return None
-
-        #self.logger.info('Look AT THE SOURCE' + str(src))
-        src = 's'+str(src)
-        dst = hostDict[str(dst)]
-
         path_out = []
-        # TODO Task 3: Implement load balanced routing
         if balanced:
-            weight = 'utilization'
-        else:
-            weight = 1
-        # Task 2: Determine path to destination using nx.shortest_path.
-        try:
-            path_tmp = nx.shortest_path(self.graph, src, dst, weight=weight)  # weight = 1, Path weight = # Hops
+            # TODO Task 3: Implement load balanced routing
+            path_tmp = nx.shortest_path(self.graph, src, dst, weight="link_load")
             self.logger.info('A Path was found!! : %s', path_tmp)             # DEBUG
-        except:
-            self.logger.info("Path not found")
-            path_tmp = []
-        path_index = 0
-        for dp_index in range(len(path_tmp)-1):
-            # TODO Task 2: Convert to an appropriate representation
-            src_dp = path_tmp[dp_index]
-            dst_dp = path_tmp[dp_index+1]
-            out_port = self.graph[src_dp][dst_dp]['ports'][src_dp]
-            # self.logger.info("SRC: %s OUT_PORT: %s\nDST: %s " % (src_dp, out_port, dst_dp))
-            path_out.append({"dp":src_dp, "port":out_port})
+            path_index = 0
+            for dpid in path_tmp[:-1]:
+                dp = topo_api.get_switch(self, dpid)[0].dp
+                port = self.graph.edges[(dpid, path_tmp[path_index + 1])]['port']
+                path_index += 1
+                path_out.append({'dp': dp, 'port': port, 'dpid': dp.id})
+        else:
+            # Task 2: Determine path to destination using nx.shortest_path.
+            path_tmp = nx.shortest_path(self.graph, src, dst, weight=None)  # weight = 1, Path weight = # Hops
+            self.logger.info('A Path was found!! : %s', path_tmp)             # DEBUG
+            path_index = 0
+            for dpid in path_tmp[:-1]:
+                # TODO Task 2: Convert to an appropriate representation
+                dp = topo_api.get_switch(self, dpid)[0].dp
+                port = self.graph.edges[(dpid, path_tmp[path_index + 1])]['port']
+                path_index += 1
+                path_out.append({'dp': dp, 'port': port, 'dpid': dp.id})
         self.logger.debug("Path: %s" % path_out)
         if len(path_out) == 0:
-            #raise PathCalculationError()
-            self.logger.info('Here was the problem')
+            raise PathCalculationError()
         return path_out
 
     def add_flow(self, datapath, priority, match, actions, buffer_id=None, idle_timeout=0):
@@ -263,7 +254,7 @@ class LoadBalancer(app_manager.RyuApp):
                                     match=match, actions=actions)
         datapath.send_msg(mod)
 
-    def add_flow_for_path(self, parser, routing_path, pkt, nw_src, nw_dest, dl_src, dl_dst, in_port):
+    def add_flow_for_path(self, parser, routing_path, pkt, nw_src, nw_dest, dl_src, in_port):
         """
         Installs rules on all switches on the given path to forward the flow
         Args:
@@ -281,22 +272,24 @@ class LoadBalancer(app_manager.RyuApp):
         tcp_data = pkt.get_protocol(tcp.tcp)
         udp_data = pkt.get_protocol(udp.udp)
 
-        # port_previous_hop = in_port
+        port_previous_hop = in_port
         for hop in routing_path:  # The switches between the incoming switch and the server
-            # self.logger.debug("previous port: %s, this hop dp: %s" % (port_previous_hop, hop['dp'].id))
+            self.logger.debug("previous port: %s, this hop dp: %s" % (port_previous_hop, hop['dp'].id))
             # TODO Task 2: Determine match and actions
             if tcp_data:
                 match = parser.OFPMatch(dl_type=0x0800, nw_dst=nw_dest,
-                                        nw_src=nw_src, nw_proto=6, tp_src=tcp_data.src_port) #, dl_src=dl_src)
+                                        nw_src=nw_src, nw_proto=6, tp_src=tcp_data.src_port,
+                                        in_port=port_previous_hop) #, dl_src=dl_src)
             elif udp_data:
                 match = parser.OFPMatch(dl_type=0x0800, nw_dst=nw_dest,
-                                        nw_src=nw_src, nw_proto=17, tp_src=udp_data.src_port) #, dl_src=dl_src)
+                                        nw_src=nw_src, nw_proto=17, tp_src=udp_data.src_port,
+                                        in_port=port_previous_hop) #, dl_src=dl_src)
             else:
-                match = parser.OFPMatch(dl_type=0x0800, nw_dst=nw_dest, nw_src=nw_src) # , dl_src=dl_src)
+                match = parser.OFPMatch(dl_type=0x0800, nw_dst=nw_dest,
+                                        in_port=port_previous_hop, nw_src=nw_src) # , dl_src=dl_src)
             actions = [parser.OFPActionOutput(hop['port'], 0)]
-            self.add_flow(self.switches[hop['dp']], FLOW_DEFAULT_PRIO_FORWARDING, match, actions, None, FLOW_DEFAULT_IDLE_TIMEOUT_IP)
-            # port_previous_hop = hop['port']
-            
+            self.add_flow(hop['dp'], FLOW_DEFAULT_PRIO_FORWARDING, match, actions, None, FLOW_DEFAULT_IDLE_TIMEOUT)
+            port_previous_hop = hop['port']
 
     def _handle_ipv4(self, datapath, in_port, pkt):
         """
@@ -323,23 +316,18 @@ class LoadBalancer(app_manager.RyuApp):
         eth_dst_in = eth.dst
         net_src = ipv4_data.src
         net_dst = ipv4_data.dst
-        # self.logger.info(self.ip_to_mac.get(net_dst, eth_dst_in))         # DEBUG
+
         # Get the path to the server
         routing_path = self.calculate_path_to_server(
             datapath.id, self.ip_to_mac.get(net_dst, eth_dst_in), balanced=True
         )
-
-        if routing_path is None:
-            self.logger.info('There is No ROUTING_PATH')
-            return
-
         # self.logger.info("Calculated path from %s-%s: %s" % (datapath.id, self.ip_to_mac.get(net_dst, eth_dst_in),
                                                             #  routing_path))
-        self.add_flow_for_path(parser, routing_path, pkt, net_src, net_dst, eth.src, eth.dst, in_port)
+        self.add_flow_for_path(parser, routing_path, pkt, net_src, net_dst, eth.src, in_port)
         self.logger.debug("Installed flow entries FORWARDING (pub->priv)")
 
         actions_po = [parser.OFPActionOutput(routing_path[-1]["port"], 0)]
-        out_po = parser.OFPPacketOut(datapath=self.switches[routing_path[-1]['dp']],
+        out_po = parser.OFPPacketOut(datapath=routing_path[-1]['dp'],
                                      buffer_id=ofproto.OFP_NO_BUFFER,
                                      in_port=in_port, actions=actions_po, data=pkt.data)
 
@@ -447,8 +435,7 @@ class LoadBalancer(app_manager.RyuApp):
             arp_dst = arp_header.dst_ip
             arp_src = arp_header.src_ip
             current_switch = datapath.id
-
-            # Check if ARP-package from arp_src to arp_dst already passed this switch.
+            # Check if ARP-package from arp_src to arp_dst already passed this switch and drop or process accordingly
             if self.arp_checker[current_switch][arp_src][arp_dst]:
                 self.logger.debug("ARP package known and therefore dropped")
                 return
