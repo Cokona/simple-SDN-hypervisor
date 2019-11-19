@@ -12,6 +12,7 @@ def main():
     sys.argv.append('sdn_load_balancer_app')
     # sys.argv.append('--verbose')
     sys.argv.append('--enable-debugger')
+    sys.argv.append('--observe-links')
     manager.main()
 
 if __name__ == '__main__':
