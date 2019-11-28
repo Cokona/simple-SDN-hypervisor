@@ -137,9 +137,9 @@ class LoadBalancer(app_manager.RyuApp):
         while True:
             # self.logger.info("Nodes: %s" % self.graph.nodes)
             # self.logger.info("Edges: %s" % self.graph.edges)
-            nx.draw_networkx(self.graph,with_labels=True)
-            plt.draw()
-            plt.show()
+            # nx.draw_networkx(self.graph,with_labels=True)
+            # plt.draw()
+            # plt.show()
             # for (u, v, wt) in self.graph.edges.data('utilization'):
             #     self.logger.info("Edge %s utilization %s" % ((u,v), wt))
             hub.sleep(10)
