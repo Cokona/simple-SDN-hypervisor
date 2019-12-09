@@ -77,7 +77,7 @@ class LoadBalancer(app_manager.RyuApp):
         # Add also appropriate edges to connect it to the next switch
         if host.mac in hostDict.keys():
             self.graph.add_node(hostDict[host.mac])
-	    self.logger.info("The ip of %s is %s", hostDict[host.mac], host.ipv4)
+            self.logger.info("The ip of %s is %s", hostDict[host.mac], host.ipv4)
             current_switch = 's' + str(host.port.dpid)
             self.graph.add_edge(hostDict[host.mac],current_switch, ports= {hostDict[host.mac]: 1, current_switch: host.port.port_no}, 
                                 time=time.time(), bytes=0, utilization=0)
