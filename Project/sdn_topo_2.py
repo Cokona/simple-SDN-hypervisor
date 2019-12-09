@@ -1,6 +1,6 @@
 """Custom topology 
 
- -s1a-----s2a-----s3a-
+ -s1 ----- s2 -----s3-
   | |     | |     | |  
  h1 h2   h3 h4   h5 h6
  
