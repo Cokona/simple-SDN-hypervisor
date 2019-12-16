@@ -77,7 +77,6 @@ class LoadBalancer(app_manager.RyuApp):
         # Add also appropriate edges to connect it to the next switch
         if host.mac in hostDict.keys():
             self.graph.add_node(hostDict[host.mac])
-            self.logger.info("The ip of %s is %s", hostDict[host.mac], host.ipv4)
             current_switch = 's' + str(host.port.dpid)
             self.graph.add_edge(hostDict[host.mac],current_switch, ports= {hostDict[host.mac]: 1, current_switch: host.port.port_no}, 
                                 time=time.time(), bytes=0, utilization=0)
@@ -458,7 +457,9 @@ class LoadBalancer(app_manager.RyuApp):
                 self.logger.debug("Forwarding ARP to learn address, but dropping all consecutive packages.")
                 self._handle_simple_switch(datapath, in_port, pkt, msg.buffer_id, eth_dst)
         elif ipv4_header:  # IP packet -> load balanced routing
-            self._handle_ipv4(datapath, in_port, pkt)
+            #self._handle_ipv4(datapath, in_port, pkt)
+            self._handle_simple_switch(datapath, in_port, pkt, msg.buffer_id)
+            return 
         elif ipv6_header:
             return
         else:
