@@ -14,11 +14,13 @@ def server_function(name):
     logging.info("Server Thread %s: finishing", name)
 
 def client_function(name):
-    time.sleep(5)
-    logging.info("Server Thread %s: starting", name)
-    AppClient(host, port, action, value)
-    logging.info("Server Thread %s: finishing", name)
-
+    for i in range(3):
+        time.sleep(1)
+        logging.info("Server Thread %s: starting", name)
+        AppClient(host, port, action, value)
+        logging.info("Server Thread %s: finishing", name)
+        print()
+        print()
 
 if __name__ == "__main__":
     format = "%(asctime)s: %(message)s"

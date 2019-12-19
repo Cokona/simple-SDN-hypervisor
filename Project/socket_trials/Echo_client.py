@@ -1,6 +1,6 @@
 import socket
 
-def create_client(ip_adress, tcp_port):
+def create_client(ip_address='127.0.0.1', tcp_port=65432):
     '''
     Creates a client that sends a TCP connection request to the given ip address and port
         ip_address: string
