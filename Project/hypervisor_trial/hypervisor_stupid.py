@@ -5,15 +5,15 @@ from pyroute2 import IPRoute
 from MultiClasses import MultiClient, MultiServer
 
 host = ''
-port = 65432
+port = 12345
 
 
 ip = IPRoute()
 index = ip.link_lookup(ifname='lo')[0]
-ip.addr('set', index, address='127.0.0.5', mask=24)
+ip.addr('set', index, address='127.0.0.1', mask=24)
 print('Starting server')
 #AppServer(host, port)
-server = MultiServer(host, port)
+server = MultiServer(host, port, stupid=True)
 server.create_server()
 
 print('closed server')

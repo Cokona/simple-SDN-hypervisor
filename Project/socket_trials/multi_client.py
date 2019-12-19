@@ -3,7 +3,7 @@ import socket
 import types
 
 host = '127.0.0.1'
-port = 65432
+port = 12345
 num_conns = 2
 messages = [b'Message 1 from client.', b'Message 2 from client.']
 
