@@ -1,3 +1,5 @@
+
+#https://stackoverflow.com/questions/17774768/python-creating-a-shared-variable-between-threads
 import logging
 import threading
 import time
