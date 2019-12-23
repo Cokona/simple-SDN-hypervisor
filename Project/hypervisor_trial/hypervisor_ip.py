@@ -1,4 +1,6 @@
 #from pyof.v0x04.common.utils import unpack_message
+#sudo Topo
+#sudo mn --custom sdn_topo_2.py --topo mytopo --controller=remote,ip=127.0.0.5,port=65432
 #https://stackoverflow.com/questions/20420937/how-to-assign-ip-address-to-interface-in-python
 from pyroute2 import IPRoute
 #from Project.socket_trials.Classes import AppServer, AppClient

@@ -103,7 +103,7 @@ class MultiServer:
             if data.outb:
                 if not self.stupid:
                     print('Forwarding')
-                    client = MultiClient(self.host, 6633, data.outb)
+                    client = MultiClient(self.host, 12345, data.outb)
                     client.create_client()
                     print('Forwarded')
                 #print('echoing', repr(data.outb), 'to', data.addr)
