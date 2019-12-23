@@ -1,6 +1,7 @@
 import selectors
 import socket
 import types
+from time import sleep
 
 
 num_conns = 1
@@ -45,10 +46,10 @@ class MultiClient():
             if recv_data:
                 print('received', repr(recv_data), 'from connection', data.connid)
                 data.recv_total += len(recv_data)
-            if not recv_data or data.recv_total == data.msg_total:
-                print('closing connection', data.connid)
-                self.sel.unregister(sock)
-                sock.close()
+            # if not recv_data or data.recv_total == data.msg_total:
+            #     print('closing connection', data.connid)
+            #     self.sel.unregister(sock)
+            #     sock.close()
         if mask & selectors.EVENT_WRITE:
             if not data.outb and data.messages:
                 data.outb = data.messages.pop(0)
@@ -57,20 +58,22 @@ class MultiClient():
                 sent = sock.send(data.outb)  # Should be ready to write
                 data.outb = data.outb[sent:]
 
-    def create_client(self):
+    def create_client(self,cthread,flag):
         self.start_connections(self.host, self.port, num_conns)
-
         while True:
-            events = self.sel.select(timeout=None)
-            for key, mask in events:
-                if key.data is None:
-                    # It’s from the listening socket and we need to accept() the connection. 
-                    # We’ll get the new socket object and register it with the selector. 
-                    self.accept_wrapper(key.fileobj)
-                else:
-                    # It’s a client socket that’s already been accepted, and we need to service it. 
-                    # service_connection() is then called and passed key and mask, which contains everything we need to operate on the socket.
-                    self.service_connection(key, mask)
+            cthread.acquire()
+                events = self.sel.select(timeout=None)
+                for key, mask in events:
+                    if key.data is None:
+                        # It’s from the listening socket and we need to accept() the connection. 
+                        # We’ll get the new socket object and register it with the selector. 
+                        self.accept_wrapper(key.fileobj)
+                    else:
+                        # It’s a client socket that’s already been accepted, and we need to service it. 
+                        # service_connection() is then called and passed key and mask, which contains everything we need to operate on the socket.
+                        self.service_connection(key, mask)
+                cthread.notify_all()
+            cthread.release()
 
 
 class MultiServer:
@@ -79,6 +82,7 @@ class MultiServer:
         self.port = port
         self.stupid = stupid
         self.sel = selectors.DefaultSelector()   # Used to select available sockets and stuff???
+        self.pass_data = None
 
     def accept_wrapper(self, sock):
         conn, addr = sock.accept()  # Should be ready to read
@@ -95,23 +99,23 @@ class MultiServer:
             recv_data = sock.recv(1024)  # Should be ready to read
             if recv_data:
                 data.outb += recv_data
-            else:
-                print('closing connection to', data.addr)
-                self.sel.unregister(sock)
-                sock.close()
+            # else:
+            #     print('closing connection to', data.addr)
+            #     self.sel.unregister(sock)
+            #     sock.close()
         if mask & selectors.EVENT_WRITE:
             if data.outb:
-                if not self.stupid:
-                    print('Forwarding')
-                    client = MultiClient(self.host, 12345, data.outb)
-                    client.create_client()
-                    print('Forwarded')
-                #print('echoing', repr(data.outb), 'to', data.addr)
+                # if not self.stupid:
+                #     print('Forwarding')
+                #     client = MultiClient(self.host, 6633, data.outb)
+                #     client.create_client()
+                #     print('Forwarded')
+                print('echoing', repr(data.outb), 'to', data.addr)
                 sent = sock.send(data.outb)  # Should be ready to write
                 data.outb = data.outb[sent:]
 
 
-    def create_server(self):
+    def create_server(self,cthread, flag):
         lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         lsock.bind((self.host, self.port))
         lsock.listen()
@@ -121,13 +125,16 @@ class MultiServer:
         self.sel.register(lsock, selectors.EVENT_READ, data=None)
 
         while True:
-            events = self.sel.select(timeout=None)
-            for key, mask in events:
-                if key.data is None:
-                    # It’s from the listening socket and we need to accept() the connection. 
-                    # We’ll get the new socket object and register it with the selector. 
-                    self.accept_wrapper(key.fileobj)
-                else:
-                    # It’s a client socket that’s already been accepted, and we need to service it. 
-                    # service_connection() is then called and passed key and mask, which contains everything we need to operate on the socket.
-                    self.service_connection(key, mask)
+            cthread.acquire()
+                events = self.sel.select(timeout=None)
+                for key, mask in events:
+                    if key.data is None:
+                        # It’s from the listening socket and we need to accept() the connection. 
+                        # We’ll get the new socket object and register it with the selector. 
+                        self.accept_wrapper(key.fileobj)
+                    else:
+                        # It’s a client socket that’s already been accepted, and we need to service it. 
+                        # service_connection() is then called and passed key and mask, which contains everything we need to operate on the socket.
+                        self.service_connection(key, mask)
+                cthread.notify_all()
+            cthread.release()
