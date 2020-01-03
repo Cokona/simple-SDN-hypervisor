@@ -59,9 +59,9 @@ def create_server(ip_address=None, tcp_port=None):
                     print("From Switch: ")
                     binary_msg = data
                     msg = unpack_message(binary_msg)
-                    if msg.header.message_type == hello_header:
+                    if str(msg.header.message_type) == 'Type.OFPT_HELLO':
                          print("HELOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
-                    elif msg.header.message_type == ErrorMsg():
+                    elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
                          print("ERRRROOORRRRRROOOROROROORORRROOROR")
                     else:
                         print(msg.header.message_type)
@@ -70,9 +70,9 @@ def create_server(ip_address=None, tcp_port=None):
                     print("From Controller")
                     binary_msg = ryu_reaction_data
                     msg = unpack_message(binary_msg)
-                    if msg.header.message_type == Hello():
+                    if str(msg.header.message_type) == 'Type.OFPT_HELLO':
                         print("HELOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
-                    elif msg.header.message_type == ErrorMsg():
+                    elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
                         print("ERRRROOORRRRRROOOROROROORORRROOROR")
                     else:
                         print(msg.header.message_type)
