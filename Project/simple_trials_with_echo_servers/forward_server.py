@@ -2,29 +2,32 @@ import socket
 import logging
 import threading
 import time
+from pyof.v0x01.common.utils import unpack_message
+from pyof.v0x01.symmetric.hello import Hello
+from pyof.v0x01.asynchronous.error_msg import ErrorMsg
 
-def create_client(ip_address, tcp_port, message=None, socket_client=None):
+
+def create_client(ip_address, tcp_port, message):
     '''
     Creates a client that sends a TCP connection request to the given ip address and port
         ip_address: string
         tcp_port: integer
     '''
-    if not socket_client:
-        HOST = ip_address
-        PORT = tcp_port
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            '''
-            socket.AF_INET      -->     IPv4
-            socket.SOCK_STREAM  -->     TCP
-            '''
-            s.connect((HOST, PORT))
-            # conn, addr = s.getsockname()
-    else:
-        s = socket_client
-    s.sendall(message)
-    data = s.recv(1024)
-    # print('Received', repr(data))
-    return data, s
+    
+    HOST = ip_address
+    PORT = tcp_port
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        '''
+        socket.AF_INET      -->     IPv4
+        socket.SOCK_STREAM  -->     TCP
+        '''
+        s.connect((HOST, PORT))
+        s.sendall(message)
+        data = s.recv(1024)
+        s.close()
+
+    #print('Received', repr(data))
+    return data
 
 def create_server(ip_address=None, tcp_port=None):
     '''
@@ -32,17 +35,17 @@ def create_server(ip_address=None, tcp_port=None):
         ip_address: string
         tcp_port: integer
     '''
+    hello_header = Hello()
     if ip_address and tcp_port:
         HOST = ip_address
         PORT = tcp_port
     else:
         HOST = '127.0.0.1'      # Standard loopback interface address (localhost)
-        PORT = 65432                # Port to listen on (non-privileged ports are > 1023)
+        PORT = 65431               # Port to listen on (non-privileged ports are > 1023)
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, PORT))
         while True:
-            socket_client = None
             s.listen()
             conn, addr = s.accept()
             with conn:
@@ -52,9 +55,29 @@ def create_server(ip_address=None, tcp_port=None):
                     # print('Data received ' + str(data))
                     if not data:
                         break
-                    ryu_reaction_data, socket_client = create_client(ip_address='127.0.0.1', tcp_port=6633, message=data, socket_client=socket_client)
+                    #print('Received from Switch', repr(data))
+                    print("From Switch: ")
+                    binary_msg = data
+                    msg = unpack_message(binary_msg)
+                    if msg.header.message_type == hello_header:
+                         print("HELOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
+                    elif msg.header.message_type == ErrorMsg():
+                         print("ERRRROOORRRRRROOOROROROORORRROOROR")
+                    else:
+                        print(msg.header.message_type)
+                    ryu_reaction_data = create_client('127.0.0.1', 6633,data)
+                    #print('Received from Ryu', repr(ryu_reaction_data))
+                    print("From Controller")
+                    binary_msg = ryu_reaction_data
+                    msg = unpack_message(binary_msg)
+                    if msg.header.message_type == Hello():
+                        print("HELOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
+                    elif msg.header.message_type == ErrorMsg():
+                        print("ERRRROOORRRRRROOOROROROORORRROOROR")
+                    else:
+                        print(msg.header.message_type)
                     conn.sendall(ryu_reaction_data)
-                    # print('Message has been forwarded')
+                    #print('Message has been forwarded')
 
 
 
