@@ -2,7 +2,7 @@ import socket
 import logging
 import threading
 import time
-from pyof.v0x04.common.utils import unpack_message
+from pyof.v0x01.common.utils import unpack_message
 
 event_send_data = threading.Event()
 event_reaction_received = threading.Event()
@@ -32,9 +32,8 @@ def create_client(ip_address, tcp_port):
         while True:
             if event_send_data.is_set():
                 s.sendall(message_to_send)
-                # print('I am stuck before ryu_reaction_data')
                 ryu_reaction_data = s.recv(1024)
-                # print('RYU_REACT has been reset')
+                print('RYU_REACT has been reset')
                 event_send_data.clear()
                 event_reaction_received.set()
     #print('Received', repr(data))
@@ -57,47 +56,39 @@ def create_server(ip_address, tcp_port):
             with conn:
                 print('Connected by', addr)
                 while True:
-                    # print('I am stuck before conn.recv')
                     data = conn.recv(1024)
                     # print('Data received ' + str(data))
                     if not data:
                         break
                     #print('Received from Switch', repr(data))
                     binary_msg = data
-                    print(binary_msg[0])
-                    if binary_msg[0] == 4:
-                        msg = unpack_message(binary_msg)
-                        # if str(msg.header.message_type) == 'Type.OFPT_HELLO':
-                        #     print("From Switch: OFPT_HELLO")
-                        # elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
-                        #     print("From Switch: OFPT_ERROR")
-                        #     pass
-                        # else:
-                        #     print('From Switch: ' + str(msg.header.message_type))
-                        print('From Switch: ' + str(msg.header.message_type) + '  SIZE: ' + str(len(data)))
+                    msg = unpack_message(binary_msg)
+                    # if str(msg.header.message_type) == 'Type.OFPT_HELLO':
+                    #     print("From Switch: OFPT_HELLO")
+                    # elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
+                    #     print("From Switch: OFPT_ERROR")
+                    #     pass
+                    # else:
+                    #     print('From Switch: ' + str(msg.header.message_type))
+                    print('From Switch: ' + str(msg.header.message_type) + '  SIZE: ' + str(len(data)))
 
                     ####### IMPLEMENT SHARED MEMORY SHIT #############  
                     message_to_send = data
                     event_send_data.set()
-                    # print('I am stuck before event.wait()')
                     event_reaction_received.wait()
                     event_reaction_received.clear()
 
-
                     #print('Received from Ryu', repr(ryu_reaction_data))
                     binary_msg = ryu_reaction_data
-
-                    print(binary_msg[0])
-                    if binary_msg[0] == 4:
-                        msg = unpack_message(binary_msg)
-                        # if str(msg.header.message_type) == 'Type.OFPT_HELLO':
-                        #     print("From Controller: OFPT_HELLO")
-                        #     pass
-                        # elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
-                        #     print("From Controller: OFPT_ERROR")
-                        # else:
-                        #     print("From Controller" + str(msg.header.message_type))
-                        print("From Controller" + str(msg.header.message_type) + '  SIZE: ' + str(len(data)))
+                    msg = unpack_message(binary_msg)
+                    # if str(msg.header.message_type) == 'Type.OFPT_HELLO':
+                    #     print("From Controller: OFPT_HELLO")
+                    #     pass
+                    # elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
+                    #     print("From Controller: OFPT_ERROR")
+                    # else:
+                    #     print("From Controller" + str(msg.header.message_type))
+                    print("From Controller" + str(msg.header.message_type) + '  SIZE: ' + str(len(data)))
                     conn.sendall(ryu_reaction_data)
                     #print('Message has been forwarded')
 
