@@ -41,9 +41,10 @@ def create_server(ip_address=None, tcp_port=None):
         PORT = tcp_port
     else:
         HOST = '127.0.0.1'      # Standard loopback interface address (localhost)
-        PORT = 65430               # Port to listen on (non-privileged ports are > 1023)
+        PORT = 65434               # Port to listen on (non-privileged ports are > 1023)
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)         # CHECK IF IT WORKS
         s.bind((HOST, PORT))
         while True:
             s.listen()
@@ -61,16 +62,16 @@ def create_server(ip_address=None, tcp_port=None):
                     if str(msg.header.message_type) == 'Type.OFPT_HELLO':
                         print("From Switch: OFPT_HELLO")
                     elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
-                        # print("OFPT_ERROR")
+                        print("From Switch: OFPT_ERROR")
                         pass
                     else:
                         print('From Switch: ' + str(msg.header.message_type))
-                    ryu_reaction_data = create_client('127.0.0.1', 6633,data)
+                    ryu_reaction_data = create_client('127.0.0.1', 6633, data)
                     #print('Received from Ryu', repr(ryu_reaction_data))
                     binary_msg = ryu_reaction_data
                     msg = unpack_message(binary_msg)
                     if str(msg.header.message_type) == 'Type.OFPT_HELLO':
-                        # print("OFPT_HELLO")
+                        print("From Controller: OFPT_HELLO")
                         pass
                     elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
                         print("From Controller: OFPT_ERROR")
