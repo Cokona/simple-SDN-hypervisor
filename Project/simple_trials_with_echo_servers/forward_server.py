@@ -3,8 +3,8 @@ import logging
 import threading
 import time
 from pyof.v0x01.common.utils import unpack_message
-from pyof.v0x01.symmetric.hello import Hello
-from pyof.v0x01.asynchronous.error_msg import ErrorMsg
+from pyof.v0x04.symmetric.hello import Hello
+from pyof.v0x04.asynchronous.error_msg import ErrorMsg
 
 
 def create_client(ip_address, tcp_port, message):

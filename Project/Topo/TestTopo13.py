@@ -10,7 +10,7 @@ from ryu.controller import ofp_event
 from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER
 from ryu.controller.handler import set_ev_cls
 from ryu.lib import hub
-from ryu.ofproto import ofproto_v1_3
+from ryu.ofproto import ofproto_v1_4
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet, arp, ipv4, tcp, udp, ether_types
 
@@ -38,7 +38,7 @@ class HyperVizor(app_manager.RyuApp):
     This class maintains the network state and fetches the CPU load of the servers. The load balancing decisions are
     triggered here and the routing paths are calculated
     """
-    OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
+    OFP_VERSIONS = [ofproto_v1_4.OFP_VERSION]
 
     _CONTEXTS = {}
 
