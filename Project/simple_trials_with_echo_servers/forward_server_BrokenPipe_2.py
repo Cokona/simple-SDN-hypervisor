@@ -22,13 +22,13 @@ def create_client(ip_address, tcp_port, message=None):
         '''
         
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)         # CHECK IF IT WORKS
-        s.connect((HOST, PORT))
-        
+        #local_socket = s.create_connection((HOST, PORT))
+        s.connect((HOST, PORT))              
         # s.sendall(message)
         # data = s.recv(1024)
         # s.close()
-        s.set_inheritable(True)
-        local_socket = s
+        #s.set_inheritable(True)
+        local_socket = s.dup()
     #print('Received', repr(data))
     return local_socket
 
@@ -64,16 +64,19 @@ def create_server(ip_address=None, tcp_port=None):
                         break
                     #print('Received from Switch', repr(data))
                     binary_msg = data
+                    
                     msg = unpack_message(binary_msg)
                     if str(msg.header.message_type) == 'Type.OFPT_HELLO':
-                        # print("From Switch: OFPT_HELLO")
+                        print("From Switch: OFPT_HELLO")
                         pass
                     elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
-                        # print("From Switch: OFPT_ERROR")
+                        print("From Switch: OFPT_ERROR")
                         pass
                     else:
-                        # print('From Switch: ' + str(msg.header.message_type))
+                        print('From Switch: ' + str(msg.header.message_type))
                         pass
+                
+                    #print("Some Unreadable Data")
 
                     # HERE INSERT CODE FOR OPENED CLIENT SOCKET
                     local_socket.sendall(data)
