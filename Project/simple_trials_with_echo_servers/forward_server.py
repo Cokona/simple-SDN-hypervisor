@@ -128,7 +128,7 @@ def create_server(sel):
     while True:
         events = sel.select(timeout=None)
         for key, mask in events:
-            if key.data is None and key.fileobj != local_socket:
+            if (key.data is None) and (key.fileobj != local_socket):
                 accept_wrapper(key.fileobj,sel)
 
             else:
