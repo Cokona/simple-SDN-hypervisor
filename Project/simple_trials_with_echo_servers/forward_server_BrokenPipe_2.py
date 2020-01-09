@@ -1,11 +1,10 @@
 import socket
+import select
 import logging
 import threading
 import time
-from pyof.v0x01.common.utils import unpack_message
-from pyof.v0x01.symmetric.hello import Hello
-from pyof.v0x01.asynchronous.error_msg import ErrorMsg
-
+import selectors
+from pyof.v0x04.common.utils import unpack_message
 
 def create_client(ip_address, tcp_port, message=None):
     '''
@@ -23,7 +22,8 @@ def create_client(ip_address, tcp_port, message=None):
         
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)         # CHECK IF IT WORKS
         #local_socket = s.create_connection((HOST, PORT))
-        s.connect((HOST, PORT))              
+        s.connect((HOST, PORT)) 
+        s.setblocking(1)             
         # s.sendall(message)
         # data = s.recv(1024)
         # s.close()
@@ -46,6 +46,7 @@ def create_server(ip_address=None, tcp_port=None):
         PORT = 65434               # Port to listen on (non-privileged ports are > 1023)
     
     local_socket = create_client('127.0.0.1', 6633)
+    #ready = select.select([local_socket], [], [], 10)
     
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)         # CHECK IF IT WORKS
@@ -65,38 +66,42 @@ def create_server(ip_address=None, tcp_port=None):
                     #print('Received from Switch', repr(data))
                     binary_msg = data
                     
-                    msg = unpack_message(binary_msg)
-                    if str(msg.header.message_type) == 'Type.OFPT_HELLO':
-                        print("From Switch: OFPT_HELLO")
-                        pass
-                    elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
-                        print("From Switch: OFPT_ERROR")
-                        pass
+                    if binary_msg[0] == 4:
+                        msg = unpack_message(binary_msg)
+                        if str(msg.header.message_type) == 'Type.OFPT_HELLO':
+                            print("From Switch: OFPT_HELLO")
+                            pass
+                        elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
+                            print("From Switch: OFPT_ERROR")
+                            pass
+                        else:
+                            print('From Switch: ' + str(msg.header.message_type))
+                            pass
                     else:
-                        print('From Switch: ' + str(msg.header.message_type))
-                        pass
-                
-                    #print("Some Unreadable Data")
+                        print("Not an Openflow Packet")
 
                     # HERE INSERT CODE FOR OPENED CLIENT SOCKET
                     local_socket.sendall(data)
+                    
                     ryu_reaction_data = local_socket.recv(1024)
 
-
+                    binary_msg1 = ryu_reaction_data
                     #print('Received from Ryu', repr(ryu_reaction_data))
-                    binary_msg = ryu_reaction_data
-                    msg = unpack_message(binary_msg)
-                    if str(msg.header.message_type) == 'Type.OFPT_HELLO':
-                        print("From Controller: OFPT_HELLO")
-                        pass
-                    elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
-                        print("From Controller: OFPT_ERROR")
-                        pass
+                    if binary_msg1[0] == 4:
+                        msg = unpack_message(binary_msg1)
+                        if str(msg.header.message_type) == 'Type.OFPT_HELLO':
+                            print("From Controller: OFPT_HELLO")
+                            pass
+                        elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
+                            print("From Controller: OFPT_ERROR")
+                            pass
+                        else:
+                            print("From Controller" + str(msg.header.message_type))
+                            pass
                     else:
-                        print("From Controller" + str(msg.header.message_type))
-                        pass
-                    conn.sendall(ryu_reaction_data)
+                        print("Not an OpenFlow Packet")
                     #print('Message has been forwarded')
+                    conn.sendall(ryu_reaction_data)
 
 
 
