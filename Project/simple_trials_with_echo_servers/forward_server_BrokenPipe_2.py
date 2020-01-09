@@ -14,23 +14,23 @@ def create_client(ip_address, tcp_port, message=None):
     ''' 
     HOST = ip_address
     PORT = tcp_port
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        '''
-        socket.AF_INET      -->     IPv4
-        socket.SOCK_STREAM  -->     TCP
-        '''
-        
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)         # CHECK IF IT WORKS
-        #local_socket = s.create_connection((HOST, PORT))
-        s.connect((HOST, PORT)) 
-        s.setblocking(1)             
-        # s.sendall(message)
-        # data = s.recv(1024)
-        # s.close()
-        #s.set_inheritable(True)
-        local_socket = s.dup()
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    '''
+    socket.AF_INET      -->     IPv4
+    socket.SOCK_STREAM  -->     TCP
+    '''
+    
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)         # CHECK IF IT WORKS
+    #local_socket = s.create_connection((HOST, PORT))
+    s.connect((HOST, PORT)) 
+    s.setblocking(1)             
+    # s.sendall(message)
+    # data = s.recv(1024)
+    # s.close()
+    #s.set_inheritable(True)
+    # local_socket = s.dup()
     #print('Received', repr(data))
-    return local_socket
+    return s
 
 def create_server(ip_address=None, tcp_port=None):
     '''
@@ -43,7 +43,7 @@ def create_server(ip_address=None, tcp_port=None):
         PORT = tcp_port
     else:
         HOST = '127.0.0.1'      # Standard loopback interface address (localhost)
-        PORT = 65434               # Port to listen on (non-privileged ports are > 1023)
+        PORT = 65432               # Port to listen on (non-privileged ports are > 1023)
     
     local_socket = create_client('127.0.0.1', 6633)
     #ready = select.select([local_socket], [], [], 10)
