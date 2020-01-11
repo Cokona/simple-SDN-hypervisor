@@ -6,13 +6,13 @@ import pyof
 
 class Hyper_packet(object):
     
-    def __init__(self,msg):
+    def __init__(self, msg, source):
         self.type_to_function = {Type.OFPT_HELLO:self.type_hello, 
                                 Type.OFPT_ERROR:self.type_error,
                                 Type.OFPT_PACKET_IN:self.type_packetin, 
                                 Type.OFPT_PACKET_OUT:self.type_packetout,
                                 Type.OFPT_FEATURES_REPLY:self.type_features_reply}
-        self.source = "HEY"
+        self.source = source
         try:
             self.msg = unpack_message(msg)
             self.parse_message()
@@ -26,11 +26,11 @@ class Hyper_packet(object):
         pass
 
     def type_error(self):
-        print("From " + self.source + ': OFPT_ERROR')
+        print("From {}: OFPT_ERROR".format(self.source))
         pass
 
     def type_packetin(self):
-        print("in port no " + str(self.msg.in_port) + ' : PACKET IN')
+        print("From {} in port no {}: PACKET IN".format(self.source, str(self.msg.in_port)))
         print(str(self.msg.reason))
         pass
 
