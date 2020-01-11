@@ -31,7 +31,7 @@ def print_packet(binary_packet, source):
             print("From " + source + ': PACKET_IN')
             print(str(msg.reason))
             pass
-         elif str(msg.header.message_type) == 'Type.OFPT_PACKET_OUT':
+        elif str(msg.header.message_type) == 'Type.OFPT_PACKET_OUT':
             print("From " + source + ': PACKET_OUT')
             #print(str(msg.reason))
             pass
