@@ -8,6 +8,7 @@ import select
 import time
 import sys
 from pyof.v0x04.common.utils import unpack_message
+from pyof.v0x04.common.header import Header, Type
 import pyof
 
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
@@ -21,19 +22,29 @@ def print_packet(binary_packet, source):
         #if binary_packet[0] == 4:
             #try:
         msg = unpack_message(binary_packet)
-        if str(msg.header.message_type) == 'Type.OFPT_HELLO':
+        
+        if msg.header.message_type is Type.OFPT_HELLO:
             print("From " + source + ": OFPT_HELLO")
+            # header(version, message_type, length, xid), elements(_pyof_class)
             pass
-        elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
+        elif msg.header.message_type is Type.OFPT_ERROR:
             print("From " + source + ': OFPT_ERROR')
             pass
-        elif str(msg.header.message_type) == 'Type.OFPT_PACKET_IN':
-            print("From " + source + ': PACKET_IN')
-            print(str(msg.reason))
+        elif msg.header.message_type is Type.OFPT_PACKET_IN:
+            print("From in_port no " + str(msg.in_port) + ': PACKET_IN')
+           
+            # header, buffer_id, in_port, actions_len, pad, actions, data
+            #print(str(msg.header.__dict__.keys()))
             pass
-        elif str(msg.header.message_type) == 'Type.OFPT_PACKET_OUT':
+        elif msg.header.message_type is Type.OFPT_PACKET_OUT:
             print("From " + source + ': PACKET_OUT')
             #print(str(msg.reason))
+            #header, buffer_id, total_len, reason, table_id, cookie, match, pad, data
+            pass
+        elif msg.header.message_type is Type.OFPT_FEATURES_REPLY:
+            print("From dpip " + str(msg.datapath_id) + ': Features_REPLY')
+            #print(str(msg.reason))
+            #header, buffer_id, total_len, reason, table_id, cookie, match, pad, data
             pass
         else:
             print("From " + source +  " : " + str(msg.header.message_type))          
