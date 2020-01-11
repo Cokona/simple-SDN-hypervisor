@@ -18,21 +18,29 @@ forward_to = ('127.0.0.1', 6633)
 
 def print_packet(binary_packet, source):
     try:
-        if binary_packet[0] == 4:
+        #if binary_packet[0] == 4:
             #try:
-            msg = unpack_message(binary_packet)
-            # if str(msg.header.message_type) == 'Type.OFPT_HELLO':
-            #     print("From " + source + ": OFPT_HELLO")
-            #     pass
-            # elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
-            #     print("From " + source + ': OFPT_ERROR')
-            #     pass
-            # else:
-            print("From " + source +  " : " + str(msg.header.message_type))
+        msg = unpack_message(binary_packet)
+        if str(msg.header.message_type) == 'Type.OFPT_HELLO':
+            print("From " + source + ": OFPT_HELLO")
+            pass
+        elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
+            print("From " + source + ': OFPT_ERROR')
+            pass
+        elif str(msg.header.message_type) == 'Type.OFPT_PACKET_IN':
+            print("From " + source + ': PACKET_IN')
+            print(str(msg.reason))
+            pass
+         elif str(msg.header.message_type) == 'Type.OFPT_PACKET_OUT':
+            print("From " + source + ': PACKET_OUT')
+            #print(str(msg.reason))
+            pass
+        else:
+            print("From " + source +  " : " + str(msg.header.message_type))          
     except:
         print("Error with Unpacking")
-    else:
-        print("Not an OpenFlow Packet")
+    # else:
+    #     print("Not an OpenFlow Packet")
 
 
 class Forward:
