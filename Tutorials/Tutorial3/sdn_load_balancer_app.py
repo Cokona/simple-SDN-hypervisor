@@ -24,8 +24,14 @@ from collections import defaultdict
 CONF = cfg.CONF
 FLOW_DEFAULT_PRIO_FORWARDING = 10
 TABLE_ROUTING = 0
+<<<<<<< HEAD:Tutorial3/sdn_load_balancer_app.py
 FLOW_DEFAULT_IDLE_TIMEOUT = 10   # Idle Timeout value for flows
 MAX_LINK_CAPACITY = 1000        # Max link capacity 1 Gbps
+=======
+FLOW_DEFAULT_IDLE_TIMEOUT = 2       # Idle Timeout value for flows
+FLOW_DEFAULT_IDLE_TIMEOUT_IP = 10   # Idle Timeout value for Ip paths
+MAX_LINK_CAPACITY = 1000            # Max link capacity 1 Gbps
+>>>>>>> 560640d26bde6238caba1669e24efda69c26c64b:Tutorials/Tutorial3/sdn_load_balancer_app.py
 
 hostDict = {'00:00:00:00:00:01': 'g_p1', '00:00:00:00:00:02': 'g_p2', '00:00:00:00:00:03': 'g_s1', '00:00:00:00:00:04': 'g_s2', 
             '00:00:00:00:00:05': 'm_p1', '00:00:00:00:00:06': 'm_p2', '00:00:00:00:00:07': 'm_s1', '00:00:00:00:00:08': 'm_s2'}
@@ -49,7 +55,7 @@ class LoadBalancer(app_manager.RyuApp):
         self.mac_to_port = {}
         self.ip_to_mac = {}
         # Variables for the network topology
-        self.graph = nx.Graph()
+        self.graph = nx.DiGraph()
         self.hosts = []
         self.links = []
         self.switches = {}
@@ -78,6 +84,8 @@ class LoadBalancer(app_manager.RyuApp):
             self.graph.add_node(hostDict[host.mac])
             current_switch = 's' + str(host.port.dpid)
             self.graph.add_edge(hostDict[host.mac],current_switch, ports= {hostDict[host.mac]: 1, current_switch: host.port.port_no}, 
+                                time=time.time(), bytes=0, utilization=0)
+            self.graph.add_edge(current_switch, hostDict[host.mac], ports= {hostDict[host.mac]: 1, current_switch: host.port.port_no}, 
                                 time=time.time(), bytes=0, utilization=0)
 
     @set_ev_cls(topo_event.EventSwitchEnter)
@@ -139,7 +147,7 @@ class LoadBalancer(app_manager.RyuApp):
             # plt.show()
             # for (u, v, wt) in self.graph.edges.data('utilization'):
             #     self.logger.info("Edge %s utilization %s" % ((u,v), wt))
-            hub.sleep(2)
+            hub.sleep(10)
 
     def _poll_link_load(self):
         """
@@ -182,7 +190,7 @@ class LoadBalancer(app_manager.RyuApp):
             # self.logger.info(self.graph.edges(current_switch))
             for (u, v) in self.graph.edges(current_switch):
                 if self.graph[current_switch][v]['ports'][current_switch] == stat.port_no:
-                    utilization = ((num_bytes - self.graph[current_switch][v]['bytes']) / (new_time - self.graph[current_switch][v]['time'])) / MAX_LINK_CAPACITY
+                    utilization = ((num_bytes - self.graph[current_switch][v]['bytes']) / (new_time - self.graph[current_switch][v]['time'])) + 1 
                     self.graph[current_switch][v]['utilization'] = utilization
                     self.graph[current_switch][v]['time'] = new_time
                     self.graph[current_switch][v]['bytes'] = num_bytes
@@ -279,10 +287,11 @@ class LoadBalancer(app_manager.RyuApp):
         tcp_data = pkt.get_protocol(tcp.tcp)
         udp_data = pkt.get_protocol(udp.udp)
 
-        port_previous_hop = in_port
+        # port_previous_hop = in_port
         for hop in routing_path:  # The switches between the incoming switch and the server
             # self.logger.debug("previous port: %s, this hop dp: %s" % (port_previous_hop, hop['dp'].id))
             # TODO Task 2: Determine match and actions
+<<<<<<< HEAD:Tutorial3/sdn_load_balancer_app.py
             if tp:
                 # match = parser.OFPMatch(dl_src=haddr_to_bin(dl_src), dl_dst=haddr_to_bin(dl_dst),
                 #                         tp_dst=tcp_data.dst_port, dl_type=0x0800, nw_proto=6)
@@ -294,6 +303,20 @@ class LoadBalancer(app_manager.RyuApp):
             # self.logger.info('\n%s \n%s \n%s\n',self.switches[hop['dp']].id,match, actions)
             self.add_flow(self.switches[hop['dp']], FLOW_DEFAULT_PRIO_FORWARDING+1, match, actions, None, FLOW_DEFAULT_IDLE_TIMEOUT)
             port_previous_hop = hop['port']
+=======
+            if tcp_data:
+                match = parser.OFPMatch(dl_type=0x0800, nw_dst=nw_dest,
+                                        nw_src=nw_src, nw_proto=6, tp_src=tcp_data.src_port) #, dl_src=dl_src)
+            elif udp_data:
+                match = parser.OFPMatch(dl_type=0x0800, nw_dst=nw_dest,
+                                        nw_src=nw_src, nw_proto=17, tp_src=udp_data.src_port) #, dl_src=dl_src)
+            else:
+                match = parser.OFPMatch(dl_type=0x0800, nw_dst=nw_dest, nw_src=nw_src) # , dl_src=dl_src)
+            actions = [parser.OFPActionOutput(hop['port'], 0)]
+            self.add_flow(self.switches[hop['dp']], FLOW_DEFAULT_PRIO_FORWARDING, match, actions, None, FLOW_DEFAULT_IDLE_TIMEOUT_IP)
+            # port_previous_hop = hop['port']
+            
+>>>>>>> 560640d26bde6238caba1669e24efda69c26c64b:Tutorials/Tutorial3/sdn_load_balancer_app.py
 
     def _handle_ipv4(self, datapath, in_port, pkt, tp=None):
         """
