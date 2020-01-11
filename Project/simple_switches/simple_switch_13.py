@@ -60,7 +60,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                                     instructions=inst)
         else:
             mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
-                                    match=match, instructions=inst)
+                                    match=match, instructions=inst,buffer_id=ofproto.OFP_NO_BUFFER)
         datapath.send_msg(mod)
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)

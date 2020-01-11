@@ -7,7 +7,8 @@ import socket
 import select
 import time
 import sys
-from pyof.v0x01.common.utils import unpack_message
+from pyof.v0x04.common.utils import unpack_message
+import pyof
 
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
 # But when buffer get to high or delay go too down, you can broke things
@@ -16,16 +17,20 @@ delay = 0.0001
 forward_to = ('127.0.0.1', 6633)
 
 def print_packet(binary_packet, source):
-    if binary_packet[0] == 4:
-        msg = unpack_message(binary_packet)
-        # if str(msg.header.message_type) == 'Type.OFPT_HELLO':
-        #     print("From " + source + ": OFPT_HELLO")
-        #     pass
-        # elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
-        #     print("From " + source + ': OFPT_ERROR')
-        #     pass
-        # else:
-        print("From " + source +  " : " + str(msg.header.message_type))
+    try:
+        if binary_packet[0] == 4:
+            #try:
+            msg = unpack_message(binary_packet)
+            # if str(msg.header.message_type) == 'Type.OFPT_HELLO':
+            #     print("From " + source + ": OFPT_HELLO")
+            #     pass
+            # elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
+            #     print("From " + source + ': OFPT_ERROR')
+            #     pass
+            # else:
+            print("From " + source +  " : " + str(msg.header.message_type))
+    except:
+        print("Error with Unpacking")
     else:
         print("Not an OpenFlow Packet")
 
