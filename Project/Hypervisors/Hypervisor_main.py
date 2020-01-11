@@ -1,42 +1,51 @@
 #!/usr/bin/python
 # This is a simple port-forward / proxy, written using only the default python
-# library. If you want to make a suggestion or fix something you can contact-me
-# at voorloop_at_gmail.com
-# Distributed over IDC(I Don't Care) license
+
 import socket
 import select
 import time
 import sys
+from pyof.v0x04.common.utils import unpack_message
+import pyof
 from hyper_parser import Hyper_packet
+
 
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
 # But when buffer get to high or delay go too down, you can broke things
 buffer_size = 1024
 delay = 0.0001
-forward_to = ('127.0.0.1', 6633)
 
+controller_address = ('127.0.0.1', 6633)
+hypervisor_address = ('127.0.0.1', 65432)
 
 class Forward:
+    '''
+    Creates and returns socket connection to a controller
+    '''
     def __init__(self):
         self.forward = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def start(self, host, port):
         try:
+            # Create connection to the controller
             self.forward.connect((host, port))
             return self.forward
         except Exception as e:
             print(e)
             return False
 
+
 class TheServer:
     input_list = []
     channel = {}
-
+    controller_sockets = []
+    switch_sockets = []
+    
     def __init__(self, host, port):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind((host, port))
-        self.server.listen(200)
+        self.server.listen(200)             # Reconsider 200
 
     def main_loop(self):
         self.input_list.append(self.server)
@@ -57,8 +66,10 @@ class TheServer:
                     self.on_recv()
 
     def on_accept(self):
-        forward = Forward().start(forward_to[0], forward_to[1])
+        forward = Forward().start(controller_address[0], controller_address[1])
+        self.controller_sockets.append(forward)
         clientsock, clientaddr = self.server.accept()
+        self.switch_sockets.append(clientsock)
         if forward:
             print(str(clientaddr) + " has connected")
             self.input_list.append(clientsock)
@@ -87,11 +98,17 @@ class TheServer:
     def on_recv(self):
         data = self.data
         # here we can parse and/or modify the data before send forward
-        Hyper_packet(data)
+        if self.s in self.controller_sockets:
+            source = "Controller"
+        elif self.s in self.switch_sockets:
+            source = "Switch"
+        else:
+            source = "--WHAT SOURCE--"    
+        packet_info = Hyper_packet(data, source)
         self.channel[self.s].send(data)
 
 if __name__ == '__main__':
-        server = TheServer('127.0.0.1', 65432)
+        server = TheServer(hypervisor_address[0],hypervisor_address[1])
         try:
             server.main_loop()
         except KeyboardInterrupt:
