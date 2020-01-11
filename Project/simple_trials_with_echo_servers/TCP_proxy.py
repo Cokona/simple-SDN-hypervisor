@@ -7,7 +7,7 @@ import socket
 import select
 import time
 import sys
-from pyof.v0x01.common.utils import unpack_message
+from pyof.v0x04.common.utils import unpack_message
 
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
 # But when buffer get to high or delay go too down, you can broke things
