@@ -7,6 +7,8 @@ import time
 import sys
 from pyof.v0x04.common.utils import unpack_message
 import pyof
+from hyper_parser import Hyper_packet
+
 
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
 # But when buffer get to high or delay go too down, you can broke things
@@ -15,34 +17,6 @@ delay = 0.0001
 
 controller_address = ('127.0.0.1', 6633)
 hypervisor_address = ('127.0.0.1', 65432)
-
-
-def print_packet(binary_packet, source):
-    try:
-        #if binary_packet[0] == 4:
-            #try:
-        msg = unpack_message(binary_packet)
-        if str(msg.header.message_type) == 'Type.OFPT_HELLO':
-            print("From " + source + ": OFPT_HELLO")
-            pass
-        elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
-            print("From " + source + ': OFPT_ERROR')
-            pass
-        elif str(msg.header.message_type) == 'Type.OFPT_PACKET_IN':
-            print("From " + source + ': PACKET_IN')
-            print(str(msg.reason))
-            pass
-        elif str(msg.header.message_type) == 'Type.OFPT_PACKET_OUT':
-            print("From " + source + ': PACKET_OUT')
-            #print(str(msg.reason))
-            pass
-        else:
-            print("From " + source +  " : " + str(msg.header.message_type))          
-    except:
-        print("Error with Unpacking")
-    # else:
-    #     print("Not an OpenFlow Packet")
-
 
 class Forward:
     '''
@@ -64,7 +38,9 @@ class Forward:
 class TheServer:
     input_list = []
     channel = {}
-
+    controller_sockets = []
+    switch_sockets = []
+    
     def __init__(self, host, port):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -91,7 +67,9 @@ class TheServer:
 
     def on_accept(self):
         forward = Forward().start(controller_address[0], controller_address[1])
+        self.controller_sockets.append(forward)
         clientsock, clientaddr = self.server.accept()
+        self.switch_sockets.append(clientsock)
         if forward:
             print(str(clientaddr) + " has connected")
             self.input_list.append(clientsock)
@@ -120,7 +98,13 @@ class TheServer:
     def on_recv(self):
         data = self.data
         # here we can parse and/or modify the data before send forward
-        print_packet(data, 'HEY')
+        if self.s in self.controller_sockets:
+            source = "Controller"
+        elif self.s in self.switch_sockets:
+            source = "Switch"
+        else:
+            source = "--WHAT SOURCE--"    
+        Hyper_packet(data, source)
         self.channel[self.s].send(data)
 
 if __name__ == '__main__':
