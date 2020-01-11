@@ -7,7 +7,7 @@ import socket
 import select
 import time
 import sys
-import hyper_parser
+from hyper_parser import Hyper_packet
 
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
 # But when buffer get to high or delay go too down, you can broke things
@@ -87,7 +87,7 @@ class TheServer:
     def on_recv(self):
         data = self.data
         # here we can parse and/or modify the data before send forward
-        hyper_parser.parse_message(data)
+        Hyper_packet(data)
         self.channel[self.s].send(data)
 
 if __name__ == '__main__':
