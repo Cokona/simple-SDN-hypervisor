@@ -16,6 +16,8 @@ class Hyper_packet(object):
     
     def __init__(self, msg, source):
 
+        self.slice = None 
+
         self.print_result = False
         self.mac_src = None
         self.mac_dst = None
@@ -24,6 +26,7 @@ class Hyper_packet(object):
         self.of_type = None
         self.in_port = None
         self.eth_type = None
+        self.slice = None
 
         self.type_to_function = {Type.OFPT_HELLO:self.type_hello, 
                                 Type.OFPT_ERROR:self.type_error,
@@ -72,14 +75,16 @@ class Hyper_packet(object):
             eth = ethernet.Ethernet(self.msg.data._value)
             self.eth_type = eth.type_t
             if self.eth_type != 'ETH_TYPE_IP6':
-                self.print_result = True 
+                #self.print_result = True 
                 if eth.type_t != 'ETH_TYPE_ARP':
                     self.mac_src = eth.src_s
                     self.mac_dst = eth.dst_s
                     self.ip_dst = eth[ip.IP].dst_s
-                    self.ip_src = eth[ip.IP].src_s     
+                    self.ip_src = eth[ip.IP].src_s   
+                    self.slice = self.ip_src[0]
                 else:
-                    self.mac_src = eth.src_s                  
+                    self.mac_src = eth.src_s 
+                                   
         except:
             print("1 failed")
     
@@ -112,5 +117,9 @@ class Hyper_packet(object):
         print("MAC Dest : " + str(self.mac_dst))
         print("IP Source : " + str(self.ip_src))
         print("IP Dest : " + str(self.ip_dst) )
+        print("Slice : " + str(self.slice) )
+
+       
+
         
         

@@ -103,8 +103,13 @@ class TheServer:
         elif self.s in self.switch_sockets:
             source = "Switch"
         else:
-            source = "--WHAT SOURCE--"    
+            source = "--WHAT SOURCE--"  
+        ########### DO FORWARDING HERE SOMEWHERE #### 
+        ##########  PACKET IN whe pinging replies with a slice NO ########
         packet_info = Hyper_packet(data, source)
+        slice_no = packet_info.slice
+        if slice_no:
+            print("Slice No is : " + str(slice_no))
         self.channel[self.s].send(data)
 
 if __name__ == '__main__':
