@@ -15,10 +15,10 @@ from hyper_parser import Hyper_packet
 # But when buffer get to high or delay go too down, you can broke things
 buffer_size = 1024
 delay = 0.0001
-number_of_controllers = 2
+number_of_controllers = int(sys.argv[1])
 controller_addresses = []
 for i in range(number_of_controllers):
-    controller_addresses.append(('127.0.0.1', 6633 + 10*i))
+    controller_addresses.append(('127.0.0.1', 6633 + i))
 hypervisor_address = ('127.0.0.1', 65432)
 
 class Forward:
