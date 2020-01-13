@@ -5,10 +5,11 @@ import socket
 import select
 import time
 import sys
-
+from Slice import Slice, Switch
 import pyof
 from pyof.v0x04.common.utils import unpack_message
 from hyper_parser import Hyper_packet
+from pyof.v0x04.common.header import Header, Type
 
 
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
@@ -17,8 +18,11 @@ buffer_size = 1024
 delay = 0.0001
 number_of_controllers = int(sys.argv[1])
 controller_addresses = []
+slices = []
+switches = []
 for i in range(number_of_controllers):
     controller_addresses.append(('127.0.0.1', 6633 + i))
+    slices.append(Slice(i+1,controller_addresses[i]))
 hypervisor_address = ('127.0.0.1', 65432)
 
 class Forward:
@@ -116,14 +120,18 @@ class TheServer:
             source = "Switch"
             packet_info = Hyper_packet(data, source)
             slice_no = packet_info.slice
+            packet_type = packet_info.of_type
+            # if packet_type is Type.OFPT_FEATURES_REPLY:
+            #     if packet_info.dpid not in switches:
+            #         switches.append(packet_info.dpid)
             if slice_no:
-                self.channels[int(slice)-1][self.s].send(data)
-                print('  - Forwarded to just Controller1')
+                self.channels[slice_no-1][self.s].send(data)
+                print('  - Forwarded to just Controller ' + str(slice_no))
                 print('*****************************************')
             else:
                 for i in range(number_of_controllers):
                     self.channels[i][self.s].send(data)
-                print('  - Forwarded to BOTH Controllers')
+                print('  - Forwarded to all Controllers')
         else:
             for i in range(number_of_controllers):
                 if self.s in self.controller_sockets[i]:
@@ -131,6 +139,7 @@ class TheServer:
                     packet_info = Hyper_packet(data, source)
                     self.channels[i][self.s].send(data)
                     break
+        print(switches)
 
 
         # packet_info = Hyper_packet(data, source)
