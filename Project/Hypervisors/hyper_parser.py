@@ -22,6 +22,7 @@ class Hyper_packet(object):
         self.in_port = None
         self.eth_type = None
         self.slice = None
+        self.dpid = None
         self.type_to_function = {Type.OFPT_HELLO:self.type_hello, 
                                 Type.OFPT_ERROR:self.type_error,
                                 Type.OFPT_PACKET_IN:self.type_packetin, 
@@ -91,6 +92,7 @@ class Hyper_packet(object):
     def type_features_reply(self):
         #print("From " + self.source + ': ' str(msg.header.message_type))
         #print("From dpid " + str(self.msg.datapath_id) + " : FEATURES_REPLY")
+        self.dpid = self.msg.datapath_id
         pass
 
     def print_message_type_and_source(self):
