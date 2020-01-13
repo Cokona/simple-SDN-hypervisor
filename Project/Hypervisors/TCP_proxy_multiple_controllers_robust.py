@@ -15,7 +15,7 @@ from hyper_parser import Hyper_packet
 # But when buffer get to high or delay go too down, you can broke things
 buffer_size = 1024
 delay = 0.0001
-number_of_controllers = 2
+number_of_controllers = 1
 controller_addresses = []
 for i in range(number_of_controllers):
     controller_addresses.append(('127.0.0.1', 6633 + 10*i))
@@ -112,15 +112,7 @@ class TheServer:
     def on_recv(self):
         data = self.data
         # here we can parse and/or modify the data before send forward
-        if self.s in self.controller_sockets[0]:
-            source = "Controller1"
-            packet_info = Hyper_packet(data, source)
-            self.channels[0][self.s].send(data)
-        elif self.s in self.controller_sockets[1]:
-            source = "Controller2"
-            packet_info = Hyper_packet(data, source)
-            self.channels[1][self.s].send(data)
-        elif self.s in self.switch_sockets:
+        if self.s in self.switch_sockets:
             source = "Switch"
             packet_info = Hyper_packet(data, source)
             slice_no = packet_info.slice
@@ -132,9 +124,14 @@ class TheServer:
                 for i in range(number_of_controllers):
                     self.channels[i][self.s].send(data)
                 print('  - Forwarded to BOTH Controllers')
-
         else:
-            source = "--WHAT SOURCE--"
+            for i in range(number_of_controllers):
+                if self.s in self.controller_sockets[i]:
+                    source = "Controller" + str(i+1)
+                    packet_info = Hyper_packet(data, source)
+                    self.channels[i][self.s].send(data)
+                    break
+
 
         # packet_info = Hyper_packet(data, source)
         # slice_no = packet_info.slice
