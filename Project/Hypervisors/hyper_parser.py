@@ -6,17 +6,12 @@ from pyof.foundation.base import GenericType
 from pypacker.layer12 import arp,lldp,ethernet
 from pypacker.layer3 import ip, ip6, ipx
 
-
-
 import pyof
-
 
 
 class Hyper_packet(object):
     
     def __init__(self, msg, source):
-
-        self.slice = None 
 
         self.print_result = False
         self.mac_src = None
@@ -27,7 +22,6 @@ class Hyper_packet(object):
         self.in_port = None
         self.eth_type = None
         self.slice = None
-
         self.type_to_function = {Type.OFPT_HELLO:self.type_hello, 
                                 Type.OFPT_ERROR:self.type_error,
                                 Type.OFPT_PACKET_IN:self.type_packetin, 
@@ -42,6 +36,7 @@ class Hyper_packet(object):
         self.source = source
         try:
             self.msg = unpack_message(msg)
+            self.print_message_type_and_source()
             self.parse_message()
         except:
             print("Error with Unpacking")
@@ -66,7 +61,7 @@ class Hyper_packet(object):
         pass
 
     def type_error(self):
-        #print("From {}: OFPT_ERROR".format(self.source))
+        #print("From {}: OFPT_ERROR of type {}".format(self.source,))
         pass
 
     def type_packetin(self):
@@ -75,7 +70,7 @@ class Hyper_packet(object):
             eth = ethernet.Ethernet(self.msg.data._value)
             self.eth_type = eth.type_t
             if self.eth_type != 'ETH_TYPE_IP6':
-                #self.print_result = True 
+                # self.print_result = True 
                 if eth.type_t != 'ETH_TYPE_ARP':
                     self.mac_src = eth.src_s
                     self.mac_dst = eth.dst_s
@@ -90,16 +85,17 @@ class Hyper_packet(object):
     
              
     def type_packetout(self):
-        #print("From " + self.source + ': PACKET_OUT')  
+        # print("From " + self.source + ': PACKET_OUT')  
         pass
 
     def type_features_reply(self):
-        #print("From " + self.source + ': OFPT_FEATURES_REPLY')
+        #print("From " + self.source + ': ' str(msg.header.message_type))
         #print("From dpid " + str(self.msg.datapath_id) + " : FEATURES_REPLY")
         pass
 
+    def print_message_type_and_source(self):
+        print("From {} : {}".format(self.source,str(self.msg.header.message_type)))
 
-    
     def parse_message(self):
         self.of_type = self.msg.header.message_type
         if self.of_type in self.type_to_function.keys():
