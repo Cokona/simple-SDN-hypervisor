@@ -5,9 +5,8 @@ import socket
 import select
 import time
 import sys
-from pyof.v0x04.common.utils import unpack_message
-import pyof
 from hyper_parser import Hyper_packet
+from ryu_ka_parser import Ryu_ka_packet
 
 
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
@@ -16,7 +15,7 @@ buffer_size = 1024
 delay = 0.0001
 
 controller_address = ('127.0.0.1', 6633)
-hypervisor_address = ('127.0.0.1', 65432)
+hypervisor_address = ('127.0.0.1', 65431)
 
 class Forward:
     '''
@@ -106,10 +105,13 @@ class TheServer:
             source = "--WHAT SOURCE--"  
         ########### DO FORWARDING HERE SOMEWHERE #### 
         ##########  PACKET IN whe pinging replies with a slice NO ########
-        packet_info = Hyper_packet(data, source)
-        slice_no = packet_info.slice
-        if slice_no:
-            print("Slice No is : " + str(slice_no))
+        #packet_info = Hyper_packet(data, source)
+        packet_info_ryu = Ryu_ka_packet(data, source)
+        print(type(data))
+        print(data)
+        #slice_no = packet_info.slice
+        #if slice_no:
+        #    print("Slice No is : " + str(slice_no))
         self.channel[self.s].send(data)
 
 if __name__ == '__main__':
