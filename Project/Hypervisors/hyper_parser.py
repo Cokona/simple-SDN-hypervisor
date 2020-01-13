@@ -93,7 +93,7 @@ class Hyper_packet(object):
         #print("From " + self.source + ': ' str(msg.header.message_type))
         #print("From dpid " + str(self.msg.datapath_id) + " : FEATURES_REPLY")
         self.dpid = self.msg.datapath_id
-        self.print_result = True
+        #self.print_result = True
         pass
 
     def print_message_type_and_source(self):
