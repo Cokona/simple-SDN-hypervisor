@@ -37,7 +37,7 @@ class Hyper_packet(object):
         self.source = source
         try:
             self.msg = unpack_message(msg)
-            self.print_message_type_and_source()
+            #self.print_message_type_and_source()
             self.parse_message()
         except:
             print("Error with Unpacking")
@@ -71,13 +71,13 @@ class Hyper_packet(object):
             eth = ethernet.Ethernet(self.msg.data._value)
             self.eth_type = eth.type_t
             if self.eth_type != 'ETH_TYPE_IP6':
-                # self.print_result = True 
+                self.print_result = True 
                 if eth.type_t != 'ETH_TYPE_ARP':
                     self.mac_src = eth.src_s
                     self.mac_dst = eth.dst_s
                     self.ip_dst = eth[ip.IP].dst_s
                     self.ip_src = eth[ip.IP].src_s   
-                    self.slice = self.ip_src[0]
+                    self.slice = int(self.ip_src[0])
                 else:
                     self.mac_src = eth.src_s 
                                    
@@ -93,6 +93,7 @@ class Hyper_packet(object):
         #print("From " + self.source + ': ' str(msg.header.message_type))
         #print("From dpid " + str(self.msg.datapath_id) + " : FEATURES_REPLY")
         self.dpid = self.msg.datapath_id
+        self.print_result = True
         pass
 
     def print_message_type_and_source(self):
@@ -116,6 +117,7 @@ class Hyper_packet(object):
         print("IP Source : " + str(self.ip_src))
         print("IP Dest : " + str(self.ip_dst) )
         print("Slice : " + str(self.slice) )
+        print("DPID : " + str(self.dpid))
 
        
 
