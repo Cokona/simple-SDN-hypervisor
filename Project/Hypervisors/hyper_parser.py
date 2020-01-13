@@ -34,12 +34,11 @@ class Hyper_packet(object):
                                 Type.OFPT_MULTIPART_REQUEST:self.type_multipart_request,
                                 Type.OFPT_MULTIPART_REPLY:self.type_multipart_reply}
         self.source = source
-        try:
-            self.msg = unpack_message(msg)
-            self.print_message_type_and_source()
-            self.parse_message()
-        except:
-            print("Error with Unpacking")
+        self.msg = unpack_message(msg)
+        self.print_message_type_and_source()
+        self.parse_message()
+        # except:
+        #     print("Error with Unpacking")
         if self.print_result:
             self.print_the_packet_result()
          
