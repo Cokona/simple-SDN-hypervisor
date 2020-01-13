@@ -117,13 +117,13 @@ class TheServer:
             packet_info = Hyper_packet(data, source)
             slice_no = packet_info.slice
             if slice_no:
-                self.channels[int(slice)-1][self.s].send(data)
-                print('  - Forwarded to just Controller1')
+                self.channels[slice_no-1][self.s].send(data)
+                print('  - Forwarded to just Controller ' + str(slice_no))
                 print('*****************************************')
             else:
                 for i in range(number_of_controllers):
                     self.channels[i][self.s].send(data)
-                print('  - Forwarded to BOTH Controllers')
+                print('  - Forwarded to ALL Controllers')
         else:
             for i in range(number_of_controllers):
                 if self.s in self.controller_sockets[i]:
@@ -131,12 +131,6 @@ class TheServer:
                     packet_info = Hyper_packet(data, source)
                     self.channels[i][self.s].send(data)
                     break
-
-
-        # packet_info = Hyper_packet(data, source)
-        # slice_no = packet_info.slice
-        # if slice_no:
-        #     print("Slice No is : " + str(slice_no))
        
 
 if __name__ == '__main__':
