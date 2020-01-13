@@ -121,9 +121,9 @@ class TheServer:
             packet_info = Hyper_packet(data, source)
             slice_no = packet_info.slice
             packet_type = packet_info.of_type
-            # if packet_type is Type.OFPT_FEATURES_REPLY:
-            #     if packet_info.dpid not in switches:
-            #         switches.append(packet_info.dpid)
+            if packet_type is Type.OFPT_FEATURES_REPLY:
+                if packet_info.dpid not in switches:
+                    switches.append(packet_info.dpid)
             if slice_no:
                 self.channels[slice_no-1][self.s].send(data)
                 print('  - Forwarded to just Controller ' + str(slice_no))
