@@ -15,9 +15,10 @@ from hyper_parser import Hyper_packet
 # But when buffer get to high or delay go too down, you can broke things
 buffer_size = 1024
 delay = 0.0001
-
-controller_address = ('127.0.0.1', 6633)
-controller2_address = ('127.0.0.1', 6644)
+number_of_controllers = 2
+controller_addresses = []
+for i in range(number_of_controllers):
+    controller_addresses.append(('127.0.0.1', 6633 + 10*i))
 hypervisor_address = ('127.0.0.1', 65432)
 
 class Forward:
@@ -39,11 +40,12 @@ class Forward:
 
 class TheServer:
     input_list = []
-    channel = {}
-    channel2 = {}
-    controller_sockets = []
-    controller2_sockets = []
     switch_sockets = []
+    controller_sockets = []
+    channels = []
+    for i in range(number_of_controllers):
+        channels.append({})
+        controller_sockets.append([])
     
     def __init__(self, host, port):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -70,22 +72,20 @@ class TheServer:
                     self.on_recv()
 
     def on_accept(self):
-        forward = Forward().start(controller_address[0], controller_address[1])
-        forward2 = Forward().start(controller2_address[0], controller2_address[1])
-        self.controller_sockets.append(forward)
-        self.controller2_sockets.append(forward2)
+        forwarders = []
+        for i in range(number_of_controllers):
+            forwarders.append(Forward().start(controller_addresses[i][0], controller_addresses[i][1]))
+            self.controller_sockets[i].append(forwarders[i])
         clientsock, clientaddr = self.server.accept()
         self.switch_sockets.append(clientsock)
-        if forward or forward2:
+        if forwarders[0]:
             try:
                 print(str(clientaddr) + " has connected")
                 self.input_list.append(clientsock)
-                self.input_list.append(forward)
-                self.input_list.append(forward2)
-                self.channel[clientsock] = forward
-                self.channel[forward] = clientsock
-                self.channel2[clientsock] = forward2
-                self.channel2[forward2] = clientsock
+                for i in range(number_of_controllers):
+                    self.input_list.append(forwarders[i])
+                    self.channels[i][clientsock] = forwarders[i]
+                    self.channels[i][forwarders[i]] = clientsock
             except:
                 print("One of the two controller connections could not be set")
         else:
@@ -97,46 +97,45 @@ class TheServer:
         print(str(self.s.getpeername()) + " has disconnected")
         #remove objects from input_list
         self.input_list.remove(self.s)
-        self.input_list.remove(self.channel[self.s])
-        self.input_list.remove(self.channel2[self.s])
-        out = self.channel[self.s]
-        out2 = self.channel2[self.s]
+        for i in range(number_of_controllers):
+            self.input_list.remove(self.channels[i][self.s])
+            out = self.channels[i][self.s]
+            # close the connection with remote server
+            self.channels[i][self.s].close()
+            # delete both objects from channel dict
+            del self.channels[i][out]
+            del self.channels[i][self.s]
         # close the connection with client
-        self.channel[out].close()       # equivalent to do self.s.close()
-        # close the connection with remote server
-        self.channel[self.s].close()
-        self.channel2[self.s].close()
-        # delete both objects from channel dict
-        del self.channel[out]
-        del self.channel[self.s]
-        del self.channel2[out2]
-        del self.channel2[self.s]
+        self.s.close()
+
 
     def on_recv(self):
         data = self.data
         # here we can parse and/or modify the data before send forward
-        if self.s in self.controller_sockets:
+        if self.s in self.controller_sockets[0]:
             source = "Controller1"
             packet_info = Hyper_packet(data, source)
-            self.channel[self.s].send(data)
-        elif self.s in self.controller2_sockets:
+            self.channels[0][self.s].send(data)
+        elif self.s in self.controller_sockets[1]:
             source = "Controller2"
             packet_info = Hyper_packet(data, source)
-            self.channel2[self.s].send(data)
+            self.channels[1][self.s].send(data)
         elif self.s in self.switch_sockets:
             source = "Switch"
             packet_info = Hyper_packet(data, source)
             slice_no = packet_info.slice
             if slice_no is '1':
-                self.channel[self.s].send(data)
-                print('Forwarded to just Controller1')
+                self.channels[0][self.s].send(data)
+                print('  - Forwarded to just Controller1')
+                print('*****************************************')
             elif slice_no is '2':
-                self.channel2[self.s].send(data)
-                print('Forwarded to just Controller2')
+                self.channels[1][self.s].send(data)
+                print('  - Forwarded to just Controller2')
+                print('*****************************************')
             else:
-                self.channel[self.s].send(data)
-                self.channel2[self.s].send(data)
-                print('Forwarded to BOTH Controllers')
+                self.channels[0][self.s].send(data)
+                self.channels[1][self.s].send(data)
+                print('  - Forwarded to BOTH Controllers')
 
         else:
             source = "--WHAT SOURCE--"
