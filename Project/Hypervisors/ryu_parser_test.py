@@ -2,6 +2,10 @@ from ryu.lib.packet import packet, openflow
 # fromryu.ofproto.ofproto_v1_3_parser
 import array
 
+# https://ryu.readthedocs.io/en/latest/library_packet_ref/packet_openflow.html
+# https://ryu.readthedocs.io/en/latest/library_packet_ref.html
+# https://ryu.readthedocs.io/en/latest/library_packet.html
+
 # Hello
 # data = b"\x04\x00\x00\x08\x00\x00\x00\x4d"
 # Features Request
