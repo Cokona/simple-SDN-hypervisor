@@ -7,7 +7,7 @@ if __name__ == '__main__':
         for i in range(int(sys.argv[1])-1):
             call(['gnome-terminal', '-e', "ryu-manager --ofp-tcp-listen-port " + str(6633+int(i)+1) + " --observe-links Project/Controllers/simple_switch_13.py"])
         call(['gnome-terminal', '-e', "python3 Project/Hypervisors/Hypervisor_multi.py " + sys.argv[1]])
-        call(['gnome-terminal', '-e', "sudo mn --custom Project/Topologies/sdn_topo_4.py --topo=mytopo --controller=remote,ip=127.0.0.1,port=65432,protocols=OpenFlow13"])
+        call(['gnome-terminal', '-e', "sudo mn --custom Project/Topologies/sdn_topo_5.py --topo=mytopo --controller=remote,ip=127.0.0.1,port=65432,protocols=OpenFlow13"])
         # call(['gnome-terminal', '-e', "sudo mn --controller=remote,ip=127.0.0.1,port=65432,protocols=OpenFlow13"])      
 
     except KeyboardInterrupt:

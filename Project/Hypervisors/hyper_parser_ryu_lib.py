@@ -12,7 +12,7 @@ from ryu.lib.packet import packet, openflow
 
 class Hyper_packet(object):
     
-    def __init__(self, msg, source):
+    def __init__(self, data, source):
 
         self.print_result = False
         self.mac_src = None
@@ -24,89 +24,44 @@ class Hyper_packet(object):
         self.eth_type = None
         self.slice = None
         self.dpid = None
-        self.type_to_function = {Type.OFPT_HELLO:self.type_hello, 
-                                Type.OFPT_ERROR:self.type_error,
-                                Type.OFPT_PACKET_IN:self.type_packetin, 
-                                Type.OFPT_PACKET_OUT:self.type_packetout,
-                                Type.OFPT_FEATURES_REPLY:self.type_features_reply,
-                                Type.OFPT_FEATURES_REQUEST:self.type_features_request,
-                                Type.OFPT_PORT_STATUS:self.type_port_status,
-                                Type.OFPT_ECHO_REPLY:self.type_echo_reply,
-                                Type.OFPT_ECHO_REQUEST:self.type_echo_request,
-                                Type.OFPT_MULTIPART_REQUEST:self.type_multipart_request,
-                                Type.OFPT_MULTIPART_REPLY:self.type_multipart_reply}
         self.source = source
+        
+        print("NEW MESSAGE")
+        # print(msg)
         try:
-            self.msg = unpack_message(msg)
-            #self.print_message_type_and_source()
-            self.parse_message()
+            msg = openflow.openflow.parser(data)
+        
+            try:
+                # msg_type_macro = msg[0].msg.msg_type       # This is a number that corresponds to the macro
+                                                            # We should create a dict to crosscheck
+                msg_type_string = type(msg[0].msg)             # class 'ryu.ofproto.ofproto_v1_3_parser.OFPPacketIn'
+                if "class 'ryu.ofproto.ofproto_v1_3_parser.OFPPacketIn'":
+
+                    pypacker_message = unpack_message(data)
+                    print("--------UNFACKINGPARSEABLE, the actual msg type is {}".format(str(pypacker_message.header.message_type)))
+                else: 
+                    print(" * The string msg_type is {} and it has these attr: \n{}".format(msg_type_string, msg[0].msg.__dict__.keys()))
+            except Exception as e:
+                print(e)
+                # print(" * The msg does not have a type? So maybe parsing error")
+
+            try:
+                msg_data = packet.Packet(msg[0].msg.data)
+                print("  ** The message data is parsed as {}, and has the attributes: {}".format(str(msg_data),msg_data.__dict__.keys() ))
+
+            except:
+                msg_data = None
+                print("Message has no msg.data")
+
         except:
-            print("Error with Unpacking")
+            print("*Error with Unpacking the data with openflow.parser")
+        
         if self.print_result:
             self.print_the_packet_result()
          
-    def type_features_request(self):
-        pass
-    def type_port_status(self):
-        pass
-    def type_echo_reply(self):
-        pass
-    def type_echo_request(self):
-        pass
-    def type_multipart_reply(self):
-        pass
-    def type_multipart_request(self):
-        pass
-
-    def type_hello(self):
-        #print("From " + self.source + ": OFPT_HELLO")
-        pass
-
-    def type_error(self):
-        #print("From {}: OFPT_ERROR of type {}".format(self.source,))
-        pass
-
-    def type_packetin(self):
-        self.in_port = self.msg.in_port
-        try:
-            eth = ethernet.Ethernet(self.msg.data._value)
-            self.eth_type = eth.type_t
-            if self.eth_type != 'ETH_TYPE_IP6':
-                self.print_result = True 
-                if eth.type_t != 'ETH_TYPE_ARP':
-                    self.mac_src = eth.src_s
-                    self.mac_dst = eth.dst_s
-                    self.ip_dst = eth[ip.IP].dst_s
-                    self.ip_src = eth[ip.IP].src_s   
-                    self.slice = int(self.ip_src[0])
-                else:
-                    self.mac_src = eth.src_s 
-                                   
-        except:
-            print("1 failed")
-    
-             
-    def type_packetout(self):
-        # print("From " + self.source + ': PACKET_OUT')  
-        pass
-
-    def type_features_reply(self):
-        #print("From " + self.source + ': ' str(msg.header.message_type))
-        #print("From dpid " + str(self.msg.datapath_id) + " : FEATURES_REPLY")
-        self.dpid = self.msg.datapath_id
-        #self.print_result = True
-        pass
 
     def print_message_type_and_source(self):
         print("From {} : {}".format(self.source,str(self.msg.header.message_type)))
-
-    def parse_message(self):
-        self.of_type = self.msg.header.message_type
-        if self.of_type in self.type_to_function.keys():
-            self.type_to_function[self.of_type]()
-        else:
-            print("OPenflow Message Type " + str(self.of_type) + " Not in Dict")
-            print(self.of_type)
 
     def print_the_packet_result(self):
         print("Packet from : " + self.source)
@@ -120,7 +75,32 @@ class Hyper_packet(object):
         print("Slice : " + str(self.slice) )
         print("DPID : " + str(self.dpid))
 
-       
+    
+
+    # def type_packetin(self):
+    #     self.in_port = self.msg.in_port
+    #     try:
+    #         eth = ethernet.Ethernet(self.msg.data._value)
+    #         self.eth_type = eth.type_t
+    #         if self.eth_type != 'ETH_TYPE_IP6':
+    #             self.print_result = True 
+    #             if eth.type_t != 'ETH_TYPE_ARP':
+    #                 self.mac_src = eth.src_s
+    #                 self.mac_dst = eth.dst_s
+    #                 self.ip_dst = eth[ip.IP].dst_s
+    #                 self.ip_src = eth[ip.IP].src_s   
+    #                 self.slice = int(self.ip_src[0])
+    #             else:
+    #                 self.mac_src = eth.src_s 
+                                   
+    #     except:
+    #         print("1 failed")
+    
+             
+    # def type_packetout(self):
+    #     # print("From " + self.source + ': PACKET_OUT')  
+    #     pass
+
 
         
         
