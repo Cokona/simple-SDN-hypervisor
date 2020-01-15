@@ -1,13 +1,14 @@
+import struct
+import pyof
 from pyof.v0x04.common.utils import unpack_message
 from pyof.v0x04.common.header import Header, Type
 from pyof.v0x04.common.flow_match import Match, OxmOfbMatchField, MatchType
-import struct
+
 from pyof.foundation.base import GenericType
 from pypacker.layer12 import arp,lldp,ethernet
 from pypacker.layer3 import ip, ip6, ipx
 
-import pyof
-
+from ryu.lib.packet import packet, openflow
 
 class Hyper_packet(object):
     
