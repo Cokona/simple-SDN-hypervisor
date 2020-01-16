@@ -5,7 +5,7 @@ import socket
 import select
 import time
 import sys
-
+from helpers import Switch, Slice
 import pyof
 from pyof.v0x04.common.utils import unpack_message
 from hyper_parser_kimon import Hyper_packet
@@ -82,7 +82,7 @@ class TheServer:
             self.controller_sockets[i].append(forwarders[i])
         clientsock, clientaddr = self.server.accept()
         self.switch_sockets.append(clientsock)
-        self.port_switch_dict[clientsock.getpeername()[1]]= None
+        self.port_switch_dict[clientsock.getpeername()[1]]= Switch(len(self.port_switch_dict)+1)
         if forwarders[0]:
             try:
                 print(str(clientaddr) + " has connected")
@@ -120,12 +120,10 @@ class TheServer:
         data = self.data
         # here we can parse and/or modify the data before send forward
         if self.s in self.switch_sockets:
-            source = "Switch"
-            packet_info = Hyper_packet(data, source)
+            temp_switch = self.port_switch_dict[self.s.getpeername()[1]]
+            source = "Switch" + str(temp_switch.number)
+            packet_info = Hyper_packet(data,source,self.port_switch_dict[self.s.getpeername()[1]])
             slice_no = packet_info.slice
-            if packet_info.dpid:
-                if packet_info.dpid not in self.port_switch_dict.values():
-                    self.port_switch_dict[self.s.getpeername()[1]] = packet_info.dpid
             if slice_no:
                 self.channels[slice_no-1][self.s].send(data)
                 print('  - Forwarded to just Controller ' + str(slice_no))
@@ -141,7 +139,9 @@ class TheServer:
                     packet_info = Hyper_packet(data, source)
                     self.channels[i][self.s].send(data)
                     break
-        print(self.port_switch_dict)
+        # for p in self.port_switch_dict.values():
+        #     attr = vars(p)
+        #     print(', '.join("%s: %s" % item for item in attr.items()))
        
 
 if __name__ == '__main__':

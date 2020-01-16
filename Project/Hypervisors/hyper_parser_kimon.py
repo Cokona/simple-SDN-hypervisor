@@ -11,8 +11,10 @@ import pyof
 
 class Hyper_packet(object):
     
-    def __init__(self, msg, source):
+    def __init__(self, msg, source, temp_switch=None):
 
+        self.source = source
+        
         self.print_result = False
         self.mac_src = None
         self.mac_dst = None
@@ -35,42 +37,41 @@ class Hyper_packet(object):
                                 Type.OFPT_MULTIPART_REQUEST:self.type_multipart_request,
                                 Type.OFPT_MULTIPART_REPLY:self.type_multipart_reply,
                                 Type.OFPT_FLOW_MOD:self.type_flow_mod}
-        self.source = source
         try:
             self.msg = unpack_message(msg)
             #self.print_message_type_and_source()
-            self.parse_message()
+            self.parse_message(temp_switch)
         except:
             print("Error with Unpacking")
         if self.print_result:
             self.print_the_packet_result()
          
-    def type_features_request(self):
+    def type_features_request(self,temp_switch):
         pass
-    def type_port_status(self):
+    def type_port_status(self,temp_switch):
         pass
-    def type_echo_reply(self):
+    def type_echo_reply(self,temp_switch):
         pass
-    def type_echo_request(self):
+    def type_echo_request(self,temp_switch):
         pass
-    def type_multipart_reply(self):
+    def type_multipart_reply(self,temp_switch):
         pass
-    def type_multipart_request(self):
+    def type_multipart_request(self,temp_switch):
         pass
-    def type_flow_mod(self):
+    def type_flow_mod(self,temp_switch):
         pass
 
 
 
-    def type_hello(self):
+    def type_hello(self,temp_switch):
         #print("From " + self.source + ": OFPT_HELLO")
         pass
 
-    def type_error(self):
+    def type_error(self,temp_switch):
         #print("From {}: OFPT_ERROR of type {}".format(self.source,))
         pass
 
-    def type_packetin(self):
+    def type_packetin(self,temp_switch):
         self.in_port = self.msg.in_port
         try:
             # print("Lenght of the packet is : {}".format(str(len(self.msg.data._value))))
@@ -93,6 +94,7 @@ class Hyper_packet(object):
                 self.mac_dst = eth.dst_s
                 self.ip_dst = eth[ip6.IP6].dst_s
                 self.ip_src = eth[ip6.IP6].src_s
+                temp_switch.port_to_mac[self.in_port] = self.mac_src
                 #print(eth[ethernet.lldp])
             elif self.eth_type == 'ETH_TYPE_ARP':
                 print("ARP with attr: {}".format(str(eth.__dict__.keys())))
@@ -111,24 +113,25 @@ class Hyper_packet(object):
             print(e)
     
              
-    def type_packetout(self):
+    def type_packetout(self,temp_switch):
         # print("From " + self.source + ': PACKET_OUT')  
         pass
 
-    def type_features_reply(self):
+    def type_features_reply(self,temp_switch):
         #print("From " + self.source + ': ' str(msg.header.message_type))
         #print("From dpid " + str(self.msg.datapath_id) + " : FEATURES_REPLY")
         self.dpid = self.msg.datapath_id
+        temp_switch.dpid = self.dpid
         #self.print_result = True
         pass
 
     def print_message_type_and_source(self):
         print("From {} : {}".format(self.source,str(self.msg.header.message_type)))
 
-    def parse_message(self):
+    def parse_message(self,temp_switch):
         self.of_type = self.msg.header.message_type
         if self.of_type in self.type_to_function.keys():
-            self.type_to_function[self.of_type]()
+            self.type_to_function[self.of_type](temp_switch)
         else:
             print("OPenflow Message Type " + str(self.of_type) + " Not in Dict")
             print(self.of_type)

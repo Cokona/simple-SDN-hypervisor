@@ -25,25 +25,26 @@ class Slice(object):
 
 class Switch(object):
 
-    def __init__(self, dpid, out_port):
-        self.dpid = dpid
-        self.available_ports = []
-        self.connected_port = out_port
-        self.flow_entry_max = 20
-        self.flow_entry_counter = 20
+    def __init__(self,number):
+        self.number = number
+        self.dpid = None
+        self.port_to_mac = {}
+        #self.connected_port = out_port
+        # self.flow_entry_max = 20
+        # self.flow_entry_counter = 20
 
-    def flow_add(self):
-        if self.flow_entry_counter < self.flow_entry_max:
-            self.flow_entry_counter += 1
-        else:
-            ##cannot write into the switch's flow table
-            #send error msg back
-            pass
+    # def flow_add(self):
+    #     if self.flow_entry_counter < self.flow_entry_max:
+    #         self.flow_entry_counter += 1
+    #     else:
+    #         ##cannot write into the switch's flow table
+    #         #send error msg back
+    #         pass
 
-    def flow_remove(self):
-        if self.flow_entry_counter > 0:
-            self.flow_entry_counter -= 1
-        else:
-            ##cannot remove from the switch's flow table
-            #send error msg back
-            pass
+    # def flow_remove(self):
+    #     if self.flow_entry_counter > 0:
+    #         self.flow_entry_counter -= 1
+    #     else:
+    #         ##cannot remove from the switch's flow table
+    #         #send error msg back
+    #         pass

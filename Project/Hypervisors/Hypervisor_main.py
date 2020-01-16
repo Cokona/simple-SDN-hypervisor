@@ -5,7 +5,7 @@ import socket
 import select
 import time
 import sys
-from Slice import Slice, Switch
+from helpers import Slice, Switch
 import pyof
 from pyof.v0x04.common.utils import unpack_message
 from hyper_parser import Hyper_packet
