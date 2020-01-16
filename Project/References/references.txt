@@ -1,0 +1,2 @@
+For topology discovery LLDP in SDN
+1. https://ieeexplore.ieee.org/abstract/document/7021050
