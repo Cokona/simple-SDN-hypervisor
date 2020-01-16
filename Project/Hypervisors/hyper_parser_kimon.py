@@ -33,7 +33,8 @@ class Hyper_packet(object):
                                 Type.OFPT_ECHO_REPLY:self.type_echo_reply,
                                 Type.OFPT_ECHO_REQUEST:self.type_echo_request,
                                 Type.OFPT_MULTIPART_REQUEST:self.type_multipart_request,
-                                Type.OFPT_MULTIPART_REPLY:self.type_multipart_reply}
+                                Type.OFPT_MULTIPART_REPLY:self.type_multipart_reply,
+                                Type.OFPT_FLOW_MOD:self.type_flow_mod}
         self.source = source
         try:
             self.msg = unpack_message(msg)
@@ -56,6 +57,10 @@ class Hyper_packet(object):
         pass
     def type_multipart_request(self):
         pass
+    def type_flow_mod(self):
+        pass
+
+
 
     def type_hello(self):
         #print("From " + self.source + ": OFPT_HELLO")
@@ -88,7 +93,7 @@ class Hyper_packet(object):
                 self.mac_dst = eth.dst_s
                 self.ip_dst = eth[ip6.IP6].dst_s
                 self.ip_src = eth[ip6.IP6].src_s
-                print(eth[ethernet.lldp])
+                #print(eth[ethernet.lldp])
             elif self.eth_type == 'ETH_TYPE_ARP':
                 print("ARP with attr: {}".format(str(eth.__dict__.keys())))
                 # self.mac_src = eth.src_s
