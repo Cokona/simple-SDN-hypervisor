@@ -142,10 +142,17 @@ class TheServer:
         # for p in self.port_switch_dict.values():
         #     attr = vars(p)
         #     print(', '.join("%s: %s" % item for item in attr.items()))
+
+def show_exception_and_exit(exc_type, exc_value, tb):
+    import traceback
+    traceback.print_exception(exc_type, exc_value, tb)
+    input("Press key to exit.")
+    sys.exit(-1)
        
 
 if __name__ == '__main__':
         server = TheServer(hypervisor_address[0],hypervisor_address[1])
+        sys.excepthook = show_exception_and_exit      
         try:
             server.main_loop()
         except KeyboardInterrupt:
