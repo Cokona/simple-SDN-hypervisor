@@ -5,16 +5,16 @@ import struct
 from pyof.foundation.base import GenericType
 from pypacker.layer12 import arp,lldp,ethernet
 from pypacker.layer3 import ip, ip6, ipx
+from helpers import Port
 
 import pyof
 
 
-class Hyper_packet(object):
+class Packet_switch(object):
     
-    def __init__(self, msg, source, temp_switch=None):
+    def __init__(self, msg, temp_switch=None):
 
-        self.source = source
-        
+        self.source_no = temp_switch.number
         self.print_result = False
         self.mac_src = None
         self.mac_dst = None
@@ -23,54 +23,35 @@ class Hyper_packet(object):
         self.of_type = None
         self.in_port = None
         self.eth_type = None
-        self.slice = None
+        self.slice_no = None
         self.dpid = None
         self.type_to_function = {Type.OFPT_HELLO:self.type_hello, 
                                 Type.OFPT_ERROR:self.type_error,
                                 Type.OFPT_PACKET_IN:self.type_packetin, 
-                                Type.OFPT_PACKET_OUT:self.type_packetout,
                                 Type.OFPT_FEATURES_REPLY:self.type_features_reply,
-                                Type.OFPT_FEATURES_REQUEST:self.type_features_request,
-                                Type.OFPT_PORT_STATUS:self.type_port_status,
                                 Type.OFPT_ECHO_REPLY:self.type_echo_reply,
                                 Type.OFPT_ECHO_REQUEST:self.type_echo_request,
-                                Type.OFPT_MULTIPART_REQUEST:self.type_multipart_request,
-                                Type.OFPT_MULTIPART_REPLY:self.type_multipart_reply,
-                                Type.OFPT_FLOW_MOD:self.type_flow_mod}
+                                Type.OFPT_MULTIPART_REPLY:self.type_multipart_reply}
         try:
             self.msg = unpack_message(msg)
-            #self.print_message_type_and_source()
             self.parse_message(temp_switch)
-        except:
-            print("Error with Unpacking")
+        except Exception as e:
+            print('EXCEPTION from Switch: ' + str(e))
         if self.print_result:
             self.print_the_packet_result()
-         
-    def type_features_request(self,temp_switch):
-        pass
-    def type_port_status(self,temp_switch):
-        pass
+    
+    
+    
     def type_echo_reply(self,temp_switch):
         pass
     def type_echo_request(self,temp_switch):
         pass
     def type_multipart_reply(self,temp_switch):
         pass
-    def type_multipart_request(self,temp_switch):
-        pass
-    def type_flow_mod(self,temp_switch):
-        pass
-
-
-
     def type_hello(self,temp_switch):
-        #print("From " + self.source + ": OFPT_HELLO")
         pass
-
     def type_error(self,temp_switch):
-        #print("From {}: OFPT_ERROR of type {}".format(self.source,))
         pass
-
     def type_packetin(self,temp_switch):
         self.in_port = self.msg.in_port
         try:
@@ -94,8 +75,9 @@ class Hyper_packet(object):
                 self.mac_dst = eth.dst_s
                 self.ip_dst = eth[ip6.IP6].dst_s
                 self.ip_src = eth[ip6.IP6].src_s
-                temp_switch.port_to_mac[self.in_port] = self.mac_src
-                #print(eth[ethernet.lldp])
+                if self.in_port not in temp_switch.ports.keys():
+                    temp_switch.ports[self.in_port] = Port(self.in_port)
+                temp_switch.ports[self.in_port].update_mac_and_slice_no(self.mac_src)
             elif self.eth_type == 'ETH_TYPE_ARP':
                 print("ARP with attr: {}".format(str(eth.__dict__.keys())))
                 # self.mac_src = eth.src_s
@@ -105,28 +87,21 @@ class Hyper_packet(object):
                 # self.mac_dst = eth.dst_s
                 # self.ip_dst = eth[ip.IP].dst_s
                 # self.ip_src = eth[ip.IP].src_s   
-                # self.slice = int(self.ip_src[0])
+                # self.slice_no = int(self.ip_src[0])
             else:
                 print(self.eth_type)
-                                   
+        
+            self.slice_no = temp_switch.ports[self.in_port].slice_no
+
         except Exception as e:
             print(e)
     
-             
-    def type_packetout(self,temp_switch):
-        # print("From " + self.source + ': PACKET_OUT')  
-        pass
-
     def type_features_reply(self,temp_switch):
-        #print("From " + self.source + ': ' str(msg.header.message_type))
         #print("From dpid " + str(self.msg.datapath_id) + " : FEATURES_REPLY")
         self.dpid = self.msg.datapath_id
         temp_switch.dpid = self.dpid
         #self.print_result = True
         pass
-
-    def print_message_type_and_source(self):
-        print("From {} : {}".format(self.source,str(self.msg.header.message_type)))
 
     def parse_message(self,temp_switch):
         self.of_type = self.msg.header.message_type
@@ -137,7 +112,81 @@ class Hyper_packet(object):
             print(self.of_type)
 
     def print_the_packet_result(self):
-        print("Packet from : " + self.source)
+        print("Packet from : Switch" + str(self.source_no))
+        print("OF Packet Type : " + str(self.of_type))
+        print("In Port : " + str(self.in_port))
+        # print("Eth Packet type : " + str(self.eth_type))
+        print("MAC source : " + str(self.mac_src))
+        # print("MAC Dest : " + str(self.mac_dst))
+        # print("IP Source : " + str(self.ip_src))
+        # print("IP Dest : " + str(self.ip_dst) )
+        print("Slice : " + str(self.slice_no) )
+        # print("DPID : " + str(self.dpid))
+
+
+class Packet_controller(object):
+    
+    def __init__(self, msg, controller_no):
+        
+        self.source_no = controller_no + 1
+        self.print_result = False
+        self.mac_src = None
+        self.mac_dst = None
+        self.ip_src = None
+        self.ip_dst = None
+        self.of_type = None
+        self.in_port = None
+        self.eth_type = None
+        self.slice_no = None
+        self.dpid = None
+        self.type_to_function = {Type.OFPT_HELLO:self.type_hello, 
+                                Type.OFPT_ERROR:self.type_error,
+                                Type.OFPT_PACKET_OUT:self.type_packetout,
+                                Type.OFPT_FEATURES_REQUEST:self.type_features_request,
+                                Type.OFPT_PORT_STATUS:self.type_port_status,
+                                Type.OFPT_ECHO_REPLY:self.type_echo_reply,
+                                Type.OFPT_ECHO_REQUEST:self.type_echo_request,
+                                Type.OFPT_MULTIPART_REQUEST:self.type_multipart_request,
+                                Type.OFPT_FLOW_MOD:self.type_flow_mod}
+        try:
+            self.msg = unpack_message(msg)
+            self.parse_message()
+        except Exception as e:
+            print("EXCEPTION from Controller" + str(e))
+        if self.print_result:
+            self.print_the_packet_result()
+         
+    def type_features_request(self):
+        pass
+    def type_port_status(self):
+        pass
+    def type_echo_reply(self):
+        pass
+    def type_echo_request(self):
+        pass
+    def type_multipart_request(self):
+        pass
+    def type_flow_mod(self):
+        pass
+    def type_hello(self):
+        pass
+    def type_error(self):
+        pass                       
+    def type_packetout(self):
+        # ADD SLICE
+        pass
+
+    def parse_message(self):
+        self.print_result = False
+        self.of_type = self.msg.header.message_type
+        if self.of_type in self.type_to_function.keys():
+            self.type_to_function[self.of_type]()
+        else:
+            print("OPenflow Message Type " + str(self.of_type) + " Not in Dict")
+            print(self.of_type)
+
+    def print_the_packet_result(self):
+        print("Packet from : Controller" + str(self.source_no))
         print("OF Packet Type : " + str(self.of_type))
         print("In Port : " + str(self.in_port))
         print("Eth Packet type : " + str(self.eth_type))
@@ -145,7 +194,7 @@ class Hyper_packet(object):
         print("MAC Dest : " + str(self.mac_dst))
         print("IP Source : " + str(self.ip_src))
         print("IP Dest : " + str(self.ip_dst) )
-        print("Slice : " + str(self.slice) )
+        print("Slice : " + str(self.slice_no) )
         print("DPID : " + str(self.dpid))
 
        

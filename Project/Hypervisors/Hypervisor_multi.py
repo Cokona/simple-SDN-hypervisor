@@ -8,7 +8,7 @@ import sys
 from helpers import Switch, Slice
 import pyof
 from pyof.v0x04.common.utils import unpack_message
-from hyper_parser_kimon import Hyper_packet
+from hyper_parser_kimon import Packet_controller, Packet_switch
 
 
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
@@ -44,13 +44,12 @@ class TheServer:
     switch_sockets = []
     controller_sockets = []
     channels = []
-    nodes = []
-    switches = []
-    port_switch_dict = {}
     for i in range(number_of_controllers):
         channels.append({})
         controller_sockets.append([])
-    
+    port_switch_dict = {}
+    port_controller_dict = {}
+
     def __init__(self, host, port):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -120,23 +119,20 @@ class TheServer:
         data = self.data
         # here we can parse and/or modify the data before send forward
         if self.s in self.switch_sockets:
-            temp_switch = self.port_switch_dict[self.s.getpeername()[1]]
-            source = "Switch" + str(temp_switch.number)
-            packet_info = Hyper_packet(data,source,self.port_switch_dict[self.s.getpeername()[1]])
-            slice_no = packet_info.slice
+            packet_info = Packet_switch(data,self.port_switch_dict[self.s.getpeername()[1]])
+            slice_no = packet_info.slice_no
             if slice_no:
                 self.channels[slice_no-1][self.s].send(data)
-                print('  - Forwarded to just Controller ' + str(slice_no))
-                print('*****************************************')
+                # print('  - Forwarded to just Controller ' + str(slice_no))
+                # print('*****************************************')
             else:
                 for i in range(number_of_controllers):
                     self.channels[i][self.s].send(data)
-                print('  - Forwarded to ALL Controllers')
+                # print('  - Forwarded to ALL Controllers')
         else:
             for i in range(number_of_controllers):
                 if self.s in self.controller_sockets[i]:
-                    source = "Controller" + str(i+1)
-                    packet_info = Hyper_packet(data, source)
+                    packet_info = Packet_controller(data, i)
                     self.channels[i][self.s].send(data)
                     break
         # for p in self.port_switch_dict.values():
