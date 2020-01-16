@@ -17,6 +17,7 @@ buffer_size = 1024
 delay = 0.0001
 number_of_controllers = int(sys.argv[1])
 controller_addresses = []
+
 for i in range(number_of_controllers):
     controller_addresses.append(('127.0.0.1', 6633 + i))
 hypervisor_address = ('127.0.0.1', 65432)
@@ -43,6 +44,9 @@ class TheServer:
     switch_sockets = []
     controller_sockets = []
     channels = []
+    nodes = []
+    switches = []
+    port_switch_dict = {}
     for i in range(number_of_controllers):
         channels.append({})
         controller_sockets.append([])
@@ -78,6 +82,7 @@ class TheServer:
             self.controller_sockets[i].append(forwarders[i])
         clientsock, clientaddr = self.server.accept()
         self.switch_sockets.append(clientsock)
+        self.port_switch_dict[clientsock.getpeername()[1]]= None
         if forwarders[0]:
             try:
                 print(str(clientaddr) + " has connected")
@@ -97,6 +102,8 @@ class TheServer:
         print(str(self.s.getpeername()) + " has disconnected")
         #remove objects from input_list
         self.input_list.remove(self.s)
+        self.switch_sockets.remove(self.s)
+        del self.port_switch_dict[self.s.getpeername()[1]]
         for i in range(number_of_controllers):
             self.input_list.remove(self.channels[i][self.s])
             out = self.channels[i][self.s]
@@ -116,6 +123,9 @@ class TheServer:
             source = "Switch"
             packet_info = Hyper_packet(data, source)
             slice_no = packet_info.slice
+            if packet_info.dpid:
+                if packet_info.dpid not in self.port_switch_dict.values():
+                    self.port_switch_dict[self.s.getpeername()[1]] = packet_info.dpid
             if slice_no:
                 self.channels[slice_no-1][self.s].send(data)
                 print('  - Forwarded to just Controller ' + str(slice_no))
@@ -131,6 +141,7 @@ class TheServer:
                     packet_info = Hyper_packet(data, source)
                     self.channels[i][self.s].send(data)
                     break
+        print(self.port_switch_dict)
        
 
 if __name__ == '__main__':
