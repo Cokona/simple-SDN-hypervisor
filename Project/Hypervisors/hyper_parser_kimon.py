@@ -9,6 +9,8 @@ from helpers import Port
 
 import pyof
 
+FLOOD_PORT = 4294967291
+
 
 class Packet_switch(object):
     
@@ -89,26 +91,24 @@ class Packet_switch(object):
                 self.ARP_src_mac = eth[arp.ARP].sha_s
                 self.ARP_dst_mac = eth[arp.ARP].tha_s
                 self.slice_no = int(self.ip_src[0])
-                self.print_result = True
+                self.print_result = False
 
                 ## COOLER IMPLEMENTATION LATER
                 if self.in_port not in temp_switch.ports.keys():
                     temp_switch.ports[self.in_port] = Port(self)
                 if self.slice_no not in temp_switch.ports[self.in_port].list_of_slices:
                     temp_switch.ports[self.in_port].list_of_slices.append(self.slice_no)
-                print("SWITCH{}'s PORT{}'s SLICE LIST: {}".format(str(temp_switch.number),str(self.in_port),str(temp_switch.ports[self.in_port].list_of_slices)))
+                # print("SWITCH{}'s PORT{}'s SLICE LIST: {}".format(str(temp_switch.number),str(self.in_port),str(temp_switch.ports[self.in_port].list_of_slices)))
 
                 pass
             elif self.eth_type == 'ETH_TYPE_IP4':
-                print("IP4 with attr: {}".format(str(eth.__dict__.keys())))
+                # print("IP4 with attr: {}".format(str(eth.__dict__.keys())))
                 self.mac_src = eth.src_s
                 self.mac_dst = eth.dst_s
                 self.ip_dst = eth[ip.IP].dst_s
                 self.ip_src = eth[ip.IP].src_s  
-                try:
-                    self.slice_no = int(self.ip_src[0])
-                except Exception as e:
-                    print("Exception trying to to get the slice from ipv4: " + str(e))
+                self.slice_no = int(self.ip_src[0])
+                
                 # if self.in_port not in temp_switch.ports.keys():
                 #     temp_switch.ports[self.in_port] = Port(self.in_port)
                 # temp_switch.ports[self.in_port].update_mac_and_slice_no(self.mac_src)
@@ -212,13 +212,13 @@ class Packet_controller(object):
             
             if action_len == 1:
                 self.out_port = int(str(self.msg.instructions[0].actions[0].port))
-                print("flow mod out port (actions[0]): " + str(self.out_port))
+                # print("flow mod out port (actions[0]): " + str(self.out_port))
             else:
-                print("flow mod actions length: " + str(action_len))
+                print("************flow mod actions length: " + str(action_len))
                 pass
 
         else:
-            print("flow mod instructions length  = " + str(instruction_len))
+            print("************flow mod instructions length  = " + str(instruction_len))
             pass
 
         self.in_port = int.from_bytes(self.msg.match.get_field(OxmOfbMatchField.OFPXMT_OFB_IN_PORT),"big")
@@ -239,12 +239,13 @@ class Packet_controller(object):
             
         if action_len == 1:
             self.out_port = int(str(self.msg.actions[0].port))
-            if self.out_port == 4294967291:
-                print("PACKET_OUT port (actions[0]): FLOOD")
+            if self.out_port == FLOOD_PORT:
+                # print("PACKET_OUT port (actions[0]): FLOOD")
+                pass
             else:
-                print("PACKET_OUT port (actions[0]): " + str(self.out_port))
+                print("*********PACKET_OUT port (actions[0]): " + str(self.out_port))
         else:
-            print("PACKET_OUT actions length: " + str(action_len))
+            print("**********PACKET_OUT actions length: " + str(action_len))
                 
         pass
 
