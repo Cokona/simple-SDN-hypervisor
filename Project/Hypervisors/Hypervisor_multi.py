@@ -35,7 +35,7 @@ class Forward:
             self.forward.connect((host, port))
             return self.forward
         except Exception as e:
-            print(e)
+            print('EXCEPTION : ' + str(e))
             return False
 
 
@@ -47,8 +47,7 @@ class TheServer:
     for i in range(number_of_controllers):
         channels.append({})
         controller_sockets.append([])
-    port_switch_dict = {}
-    port_controller_dict = {}
+    proxy_port_switch_dict = {}
 
     def __init__(self, host, port):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -81,7 +80,7 @@ class TheServer:
             self.controller_sockets[i].append(forwarders[i])
         clientsock, clientaddr = self.server.accept()
         self.switch_sockets.append(clientsock)
-        self.port_switch_dict[clientsock.getpeername()[1]]= Switch(len(self.port_switch_dict)+1)
+        self.proxy_port_switch_dict[clientsock.getpeername()[1]]= Switch(len(self.proxy_port_switch_dict)+1)
         if forwarders[0]:
             try:
                 print(str(clientaddr) + " has connected")
@@ -102,7 +101,7 @@ class TheServer:
         #remove objects from input_list
         self.input_list.remove(self.s)
         self.switch_sockets.remove(self.s)
-        del self.port_switch_dict[self.s.getpeername()[1]]
+        del self.proxy_port_switch_dict[self.s.getpeername()[1]]
         for i in range(number_of_controllers):
             self.input_list.remove(self.channels[i][self.s])
             out = self.channels[i][self.s]
@@ -119,7 +118,7 @@ class TheServer:
         data = self.data
         # here we can parse and/or modify the data before send forward
         if self.s in self.switch_sockets:
-            packet_info = Packet_switch(data,self.port_switch_dict[self.s.getpeername()[1]])
+            packet_info = Packet_switch(data,self.proxy_port_switch_dict[self.s.getpeername()[1]])
             slice_no = packet_info.slice_no
             if slice_no:
                 self.channels[slice_no-1][self.s].send(data)
@@ -135,7 +134,7 @@ class TheServer:
                     packet_info = Packet_controller(data, i)
                     self.channels[i][self.s].send(data)
                     break
-        # for p in self.port_switch_dict.values():
+        # for p in self.proxy_port_switch_dict.values():
         #     attr = vars(p)
         #     print(', '.join("%s: %s" % item for item in attr.items()))
 

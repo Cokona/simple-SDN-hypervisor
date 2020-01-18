@@ -22,12 +22,18 @@ class MyTopo(Topo):
 		
 		# Initialize topology
 		Topo.__init__(self)
-		h1 = self.addHost('h1', ip='10.0.0.1', mac='aa:aa:aa:aa:aa:01') 
-		h2 = self.addHost('h2', ip='10.0.0.2', mac='bb:bb:bb:bb:bb:02')
-		h3 = self.addHost('h3', ip='10.0.0.3', mac='aa:aa:aa:aa:aa:03')
-		h4 = self.addHost('h4', ip='10.0.0.4', mac='bb:bb:bb:bb:bb:04')
-		h5 = self.addHost('h5', ip='10.0.0.5', mac='aa:aa:aa:aa:aa:05')
-		h6 = self.addHost('h6', ip='10.0.0.6', mac='bb:bb:bb:bb:bb:06')
+		h1 = self.addHost('h1', ip='10.0.0.1', mac='AA:AA:AA:AA:AA:01') 
+		h2 = self.addHost('h2', ip='20.0.0.2', mac='CC:CC:CC:CC:CC:02')
+		h3 = self.addHost('h3', ip='10.0.0.3', mac='AA:AA:AA:AA:AA:03')
+		h4 = self.addHost('h4', ip='20.0.0.4', mac='CC:CC:CC:CC:CC:04')
+		h5 = self.addHost('h5', ip='10.0.0.5', mac='AA:AA:AA:AA:AA:05')
+		h6 = self.addHost('h6', ip='20.0.0.6', mac='CC:CC:CC:CC:CC:06')
+		# h1 = self.addHost('h1', ip='10.0.0.1') 
+		# h2 = self.addHost('h2', ip='20.0.0.2')
+		# h3 = self.addHost('h3', ip='10.0.0.3')
+		# h4 = self.addHost('h4', ip='20.0.0.4')
+		# h5 = self.addHost('h5', ip='10.0.0.5')
+		# h6 = self.addHost('h6', ip='20.0.0.6')
 		
 		# Add hosts and switches
 		s1 = self.addSwitch('s1')

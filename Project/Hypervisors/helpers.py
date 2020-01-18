@@ -54,16 +54,17 @@ class Switch(object):
 
 class Port(object):
 
-    def __init__(self, port_no):
-        self.port_no = port_no
-        self.connected_mac = None
-        self.stats = None
-        self.slice_no = None
+    def __init__(self, packet):
+        self.port_no = packet.in_port
+        self.connected_mac = packet.mac_src
+        self.list_of_slices = [packet.slice_no]
+        self.connected_ip = packet.ip_src
 
-    def update_mac_and_slice_no(self,mac):
-        self.connected_mac = mac
-        if self.connected_mac[0:2] == self.connected_mac[3:5]:
-            self.slice_no = string.ascii_uppercase.index(self.connected_mac[0]) + 1
-            # print("MADDDDDAAAAAAFFFFFAAAAAKKKKKKKKAAAAA")
-        # print("connected mac is {} with slice no {}".format(str(self.connected_mac), str(self.slice_no)))
+    # # # # # # # # def update_mac_and_slice_no(self,mac):
+    # # # # # # # #     # self.connected_mac = mac
+    # # # # # # # #     # if self.connected_mac[0:2] == self.connected_mac[3:5]:
+    # # # # # # # #     #     self.slice_no = string.ascii_uppercase.index(self.connected_mac[0]) + 1
+    # # # # # # # #         # print("MADDDDDAAAAAAFFFFFAAAAAKKKKKKKKAAAAA")
+    # # # # # # # #     # print("connected mac is {} with slice no {}".format(str(self.connected_mac), str(self.slice_no)))
+    # # # # # # # #     pass
  
