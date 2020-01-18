@@ -114,7 +114,8 @@ class Packet_switch(object):
                 # temp_switch.ports[self.in_port].update_mac_and_slice_no(self.mac_src)
                 pass
             elif self.eth_type == 'ETH_TYPE_IP':
-                print("WHO THE FUCK??? IP with attr: {} \n".format(str(eth.__dict__.keys())))
+                # print("WHO THE FUCK??? IP with attr: {} \n".format(str(eth.__dict__.keys())))
+                pass
             else:
                 print('This ETH_TYPE is not used: ' + str(self.eth_type))
 
@@ -211,7 +212,7 @@ class Packet_controller(object):
             
             if action_len == 1:
                 self.out_port = int(str(self.msg.instructions[0].actions[0].port))
-                #print("flow mod out port (actions[0]): " + str(self.out_port))
+                print("flow mod out port (actions[0]): " + str(self.out_port))
             else:
                 print("flow mod actions length: " + str(action_len))
                 pass
@@ -238,9 +239,12 @@ class Packet_controller(object):
             
         if action_len == 1:
             self.out_port = int(str(self.msg.actions[0].port))
-            #print("flow mod out port (actions[0]): " + str(self.out_port))
+            if self.out_port == 4294967291:
+                print("PACKET_OUT port (actions[0]): FLOOD")
+            else:
+                print("PACKET_OUT port (actions[0]): " + str(self.out_port))
         else:
-            print("flow mod actions length: " + str(action_len))
+            print("PACKET_OUT actions length: " + str(action_len))
                 
         pass
 
