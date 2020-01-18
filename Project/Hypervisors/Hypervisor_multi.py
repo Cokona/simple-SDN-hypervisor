@@ -18,6 +18,8 @@ delay = 0.0001
 number_of_controllers = int(sys.argv[1])
 controller_addresses = []
 
+FLOOD_PORT = 4294967291
+
 for i in range(number_of_controllers):
     controller_addresses.append(('127.0.0.1', 6633 + i))
 hypervisor_address = ('127.0.0.1', 65432)
@@ -118,25 +120,48 @@ class TheServer:
         data = self.data
         # here we can parse and/or modify the data before send forward
         if self.s in self.switch_sockets:
+            temp_switch = self.proxy_port_switch_dict[self.s.getpeername()[1]]
             packet_info = Packet_switch(data,self.proxy_port_switch_dict[self.s.getpeername()[1]])
             slice_no = packet_info.slice_no
             if slice_no:
                 self.channels[slice_no-1][self.s].send(data)
-                # print('  - Forwarded to just Controller ' + str(slice_no))
-                # print('*****************************************')
+                print('Src:  SWITCH{},  Dst:  CONTROLLER{},  Packet_type: {}'.format(
+                                                                    str(temp_switch.number),str(slice_no),str(packet_info.of_type)))
             else:
                 for i in range(number_of_controllers):
                     self.channels[i][self.s].send(data)
-                # print('  - Forwarded to ALL Controllers')
+                print('Src:  SWITCH{},  Dst:  CONTROLLERs,  Packet_type: {}'.format(
+                                                                    str(temp_switch.number),str(packet_info.of_type)))
         else:
             for i in range(number_of_controllers):
                 if self.s in self.controller_sockets[i]:
                     packet_info = Packet_controller(data, i)
-                    self.channels[i][self.s].send(data)
-                    break
+                    switch_to_send = self.proxy_port_switch_dict[self.channels[i][self.s].getpeername()[1]]
+                    controller_id = i+ 1
+                    if self.check_for_permission(packet_info, switch_to_send, controller_id):
+                        self.channels[i][self.s].send(data)
+                        print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
+                                                                    str(controller_id),str(switch_to_send.number),str(packet_info.of_type)))
+                        break
         # for p in self.proxy_port_switch_dict.values():
         #     attr = vars(p)
         #     print(', '.join("%s: %s" % item for item in attr.items()))
+
+
+    def check_for_permission(self, packet_info, switch_to_send, controller_id):
+        port_to_send = packet_info.out_port                         # Switches output port to send or add flowmod
+        if port_to_send and port_to_send != FLOOD_PORT:             # if Packet_out/Flow_mod/Stats_request
+            port = switch_to_send.ports.get(port_to_send, None)     
+            if port:                                                # If Port exists in the switch
+                if controller_id in port.list_of_slices:                     # If port has the registered slice (Happens with ARP messages)
+                    return True
+                else:
+                    return False
+        else:
+            return True
+        
+
+
 
 def show_exception_and_exit(exc_type, exc_value, tb):
     import traceback
@@ -144,7 +169,6 @@ def show_exception_and_exit(exc_type, exc_value, tb):
     input("Press key to exit.")
     sys.exit(-1)
        
-
 if __name__ == '__main__':
         server = TheServer(hypervisor_address[0],hypervisor_address[1])
         sys.excepthook = show_exception_and_exit      
