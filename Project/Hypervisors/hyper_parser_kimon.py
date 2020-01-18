@@ -53,6 +53,9 @@ class Packet_switch(object):
     def type_multipart_reply(self,temp_switch):
         pass
     def type_hello(self,temp_switch):
+        #print("*******hello*********")
+        self.version = int(str(self.msg.header.version)))
+        
         pass
     def type_error(self,temp_switch):
         pass
@@ -130,6 +133,9 @@ class Packet_switch(object):
         self.dpid = self.msg.datapath_id
         temp_switch.dpid = self.dpid
         #self.print_result = True
+        pass
+
+    def type_port_status(self, temp_switch):
         pass
 
     def parse_message(self,temp_switch):
@@ -227,6 +233,7 @@ class Packet_controller(object):
 
         pass
     def type_hello(self):
+        self.version = int(str(self.msg.header.version)))
         pass
     def type_error(self):
         pass                       
@@ -251,6 +258,8 @@ class Packet_controller(object):
         
 
         ''' parsing data'''
+
+        '''
         try:
             # print("Lenght of the packet is : {}".format(str(len(self.msg.data._value))))
             if len(self.msg.data._value) > 0:
@@ -329,6 +338,7 @@ class Packet_controller(object):
                 print("***packet out msg data length 0")
         except Exception as e:
                 print('EXCEPTION ETH packet parsing: ' + str(e))
+        '''
 
     def parse_message(self):
         self.print_result = False
