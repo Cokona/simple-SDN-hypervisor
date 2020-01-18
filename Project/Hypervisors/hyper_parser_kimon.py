@@ -56,8 +56,7 @@ class Packet_switch(object):
         pass
     def type_hello(self,temp_switch):
         #print("*******hello*********")
-        self.version = int(str(self.msg.header.version)))
-        
+        self.version = int(str(self.msg.header.version))
         pass
     def type_error(self,temp_switch):
         pass
@@ -233,7 +232,7 @@ class Packet_controller(object):
 
         pass
     def type_hello(self):
-        self.version = int(str(self.msg.header.version)))
+        self.version = int(str(self.msg.header.version))
         pass
     def type_error(self):
         pass                       
@@ -253,7 +252,7 @@ class Packet_controller(object):
             else:
                 print("*********PACKET_OUT port (actions[0]): " + str(self.out_port))
         else:
-            print(""**********PACKET_OUT actions length: " + str(action_len))
+            print("**********PACKET_OUT actions length: " + str(action_len))
             pass
         
 
