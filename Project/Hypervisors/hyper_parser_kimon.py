@@ -30,6 +30,7 @@ class Packet_switch(object):
         self.dpid = None
         self.ARP_src_mac = None     # recently added
         self.ARP_dst_mac = None     # recently added
+        self.version = None #int
         self.type_to_function = {Type.OFPT_HELLO:self.type_hello, 
                                 Type.OFPT_ERROR:self.type_error,
                                 Type.OFPT_PACKET_IN:self.type_packetin, 
@@ -53,6 +54,16 @@ class Packet_switch(object):
     def type_echo_request(self,temp_switch):
         pass
     def type_multipart_reply(self,temp_switch):
+        '''
+        print("*******multipart_reply*********")
+        # header', 'multipart_type'(int), 'flags'(int), 'pad', 'body'(pyof.v0x04.common.port.Port )
+        #print(str(self.msg.header))
+        ports = []
+        for port in self.msg.body:
+            print("port n: hw_addr ",port.port_no,port.hw_addr)
+            #name, config, state, curr, advertised, supported, peer, curr_speed, max_speed
+            ports.append(port)
+        '''
         pass
     def type_hello(self,temp_switch):
         #print("*******hello*********")
@@ -128,13 +139,41 @@ class Packet_switch(object):
             print('EXCEPTION ETH packet parsing: ' + str(e))
     
     def type_features_reply(self,temp_switch):
+        #print("*****Features reply*****")
         #print("From dpid " + str(self.msg.datapath_id) + " : FEATURES_REPLY")
+        
+        #self.n_buffers=int(str(self.msg.n_buffers))
+        #self.n_tables=int(str(self.msg.n_tables))
+        #self.auxiliary_id=int(str(self.msg.auxiliary_id))
+        #self.capabilities=int(str(self.msg.capabilities))
+        #self.reserved=int(str(self.msg.reserved))
+        
+        #'header', 'datapath_id', 'n_buffers', 'n_tables', 'auxiliary_id', 'pad', 'capabilities', 'reserved'
         self.dpid = self.msg.datapath_id
         temp_switch.dpid = self.dpid
         #self.print_result = True
         pass
 
     def type_port_status(self, temp_switch):
+        #print("*****port_status*****")
+        '''
+        reason = self.msg.reason
+        port_no = int(str(self.msg.desc.port_no))
+        hw_addr = str(self.msg.desc.hw_addr)
+
+        #header', 'reason', 'pad', 'desc'->(port)
+        #desc: port_no, pad, hw_addr, pad2, name(str), config, state, curr, advertised, supported, peer, curr_speed, max_speed
+        
+        name = str(self.msg.desc.name)) #name of the switch e.g. s3
+        config = int(self.msg.desc.config) #enum_ref --> common.port.PortConfig
+        state = int(self.msg.desc.state) #enum_ref --> common.port.PortSate
+        curr = int(self.msg.desc.curr) #enum_ref --> common.port.PortFeatures
+        advertised = int(self.msg.desc.advertised) #enum_ref --> common.port.PortFeatures
+        supported = int(self.msg.desc.supported) #enum_ref --> common.port.PortFeatures
+        peer = int(self.msg.desc.peer) #enum_ref --> common.port.PortFeatures
+        curr_speed = int(self.msg.desc.curr_speed)
+        max_speed = int(self.msg.desc.max_speed)
+        '''
         pass
 
     def parse_message(self,temp_switch):
@@ -176,6 +215,7 @@ class Packet_controller(object):
         self.eth_type = None
         self.slice_no = None
         self.dpid = None
+        self.version = None  #int 
         self.type_to_function = {Type.OFPT_HELLO:self.type_hello, 
                                 Type.OFPT_ERROR:self.type_error,
                                 Type.OFPT_PACKET_OUT:self.type_packetout,
@@ -233,6 +273,8 @@ class Packet_controller(object):
         pass
     def type_hello(self):
         self.version = int(str(self.msg.header.version))
+        #header: 'version', 'message_type', 'length', 'xid'
+        #msg.elements: []
         pass
     def type_error(self):
         pass                       
