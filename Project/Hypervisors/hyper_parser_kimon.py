@@ -26,6 +26,8 @@ class Packet_switch(object):
         self.eth_type = None
         self.slice_no = None
         self.dpid = None
+        self.ARP_src_mac = None     # recently added
+        self.ARP_dst_mac = None     # recently added
         self.type_to_function = {Type.OFPT_HELLO:self.type_hello, 
                                 Type.OFPT_ERROR:self.type_error,
                                 Type.OFPT_PACKET_IN:self.type_packetin, 
@@ -38,8 +40,8 @@ class Packet_switch(object):
             self.parse_message(temp_switch)
         except Exception as e:
             print('EXCEPTION from Switch: ' + str(e))
-        #if self.print_result:
-            #self.print_the_packet_result()
+        if self.print_result:
+            self.print_the_packet_result()
     
     
     
@@ -60,39 +62,53 @@ class Packet_switch(object):
 
             eth = ethernet.Ethernet(self.msg.data._value)
             self.eth_type = eth.type_t
-            self.print_result = True 
+            self.print_result = False 
             if self.eth_type == 'ETH_TYPE_IP6':
                 # ATTR list
                 # print("IPv6 with attr: {}".format(str(eth.__dict__.keys())))
                 #(['_lazy_handler_data', '_body_bytes', '_body_changed', '_header_len', '_header_cached', '_header_changed', '_unpacked', '_dst', '_src', '_type'])
 
+                ####### TO GET ATTR FROM PACKETINS #######
                 # print("IPv6 packet's _src: {}".format(str(eth._src)))                                         # == Address in bytes hex
                 # print("IPv6 packet's _unpacked: {}".format(str(eth._unpacked)))                               # == TRUE
                 # print("IPv6 packet's _lazy_handler_data: {}".format(str(eth._lazy_handler_data)))             # class and bytes
-                # print("IPv6 packet's _lazy_handler_data's DATA: {}".format(str(eth._lazy_handler_data[1])))   # A lot of HEX Bytes
+                # print("IPv6 packet's _lazy_handler_data's DATA: {}".format(str(eth._lazy_handler_data[1])))      # A lot of HEX Bytes
                 # print("The lazy handler data length is: {}".format(str(len(eth._lazy_handler_data[1]))))
 
                 self.mac_src = eth.src_s
                 self.mac_dst = eth.dst_s
                 self.ip_dst = eth[ip6.IP6].dst_s
                 self.ip_src = eth[ip6.IP6].src_s
-                if self.in_port not in temp_switch.ports.keys():
-                    temp_switch.ports[self.in_port] = Port(self.in_port)
-                temp_switch.ports[self.in_port].update_mac_and_slice_no(self.mac_src)
+                # if self.in_port not in temp_switch.ports.keys():
+                #     temp_switch.ports[self.in_port] = Port(self.in_port)
+                # temp_switch.ports[self.in_port].update_mac_and_slice_no(self.mac_src)
+                pass
             elif self.eth_type == 'ETH_TYPE_ARP':
-                #print("ARP with attr: {}".format(str(eth.__dict__.keys())))
+                # print("ARP with attr: {}".format(str(eth.__dict__.keys())))
                 # self.mac_src = eth.src_s
+                self.mac_src = eth.src_s
+                self.mac_dst = eth.dst_s
+                self.ip_dst = eth[arp.ARP].tpa_s
+                self.ip_src = eth[arp.ARP].spa_s
+                self.ARP_src_mac = eth[arp.ARP].sha_s
+                self.ARP_dst_mac = eth[arp.ARP].tha_s
+                self.slice_no = int(self.ip_src[0])
+                self.print_result = True
                 pass
             elif self.eth_type == 'ETH_TYPE_IP4':
-                #print("IP4 with attr: {}".format(str(eth.__dict__.keys())))
-                # self.mac_src = eth.src_s
-                # self.mac_dst = eth.dst_s
-                # self.ip_dst = eth[ip.IP].dst_s
-                # self.ip_src = eth[ip.IP].src_s   
-                # self.slice_no = int(self.ip_src[0])
+                # print("IP4 with attr: {}".format(str(eth.__dict__.keys())))
+                self.mac_src = eth.src_s
+                self.mac_dst = eth.dst_s
+                self.ip_dst = eth[ip.IP].dst_s
+                self.ip_src = eth[ip.IP].src_s   
+                self.slice_no = int(self.ip_src[0])
+
+                # if self.in_port not in temp_switch.ports.keys():
+                #     temp_switch.ports[self.in_port] = Port(self.in_port)
+                # temp_switch.ports[self.in_port].update_mac_and_slice_no(self.mac_src)
                 pass
             else:
-                print(self.eth_type)
+                print('This ETH_TYPE is not used: ' + str(self.eth_type))
         
             self.slice_no = temp_switch.ports[self.in_port].slice_no
 
@@ -112,19 +128,20 @@ class Packet_switch(object):
             self.type_to_function[self.of_type](temp_switch)
         else:
             print("OPenflow Message Type " + str(self.of_type) + " Not in Dict")
-            print(self.of_type)
 
     def print_the_packet_result(self):
         print("Packet from : Switch" + str(self.source_no))
         print("OF Packet Type : " + str(self.of_type))
         print("In Port : " + str(self.in_port))
-        # print("Eth Packet type : " + str(self.eth_type))
+        print("Eth Packet type : " + str(self.eth_type))
         print("MAC source : " + str(self.mac_src))
-        # print("MAC Dest : " + str(self.mac_dst))
-        # print("IP Source : " + str(self.ip_src))
-        # print("IP Dest : " + str(self.ip_dst) )
+        print("MAC Dest : " + str(self.mac_dst))
+        print("IP Source : " + str(self.ip_src))
+        print("IP Dest : " + str(self.ip_dst) )
         print("Slice : " + str(self.slice_no) )
         # print("DPID : " + str(self.dpid))
+        print("ARP Source mac : " + str(self.ARP_src_mac))
+        print("ARP Destination mac : " + str(self.ARP_dst_mac))
 
 
 class Packet_controller(object):
@@ -170,7 +187,7 @@ class Packet_controller(object):
     def type_multipart_request(self):
         pass
     def type_flow_mod(self):
-        print("flooooooooow moooooooood")
+        # print("flooooooooow moooooooood")
         # 'header', 'cookie', 'cookie_mask', 'table_id', 'command', 'idle_timeout', 
         # 'hard_timeout', 'priority', #'buffer_id', 'out_port', 'out_group', 'flags', 
         # 'pad', 'match', 'instructions'
@@ -178,10 +195,10 @@ class Packet_controller(object):
         #print(str(self.msg.instructions[0].instruction_type)) InstructionType.OFPIT_APPLY_ACTIONS
         #instructions[0]: 'instruction_type', 'length', 'pad', 'actions
         #print("match_type: " + str(self.msg.match.match_type)) #MatchType.OFPMT_OXM
-        print(str(self.msg.instructions[0].actions))#pyof.v0x04.common.action.ActionOutput object
+        # print(str(self.msg.instructions[0].actions))#pyof.v0x04.common.action.ActionOutput object
         self.in_port = int.from_bytes(self.msg.match.get_field(OxmOfbMatchField.OFPXMT_OFB_IN_PORT),"big")
         #flow_match.OxmTLV objects: field, mask, value
-        print("flow mod match in_port: " + str(self.in_port))
+        # print("flow mod match in_port: " + str(self.in_port))
 
         pass
     def type_hello(self):
@@ -189,13 +206,13 @@ class Packet_controller(object):
     def type_error(self):
         pass                       
     def type_packetout(self):
-        print("********packet out**********")
+        # print("********packet out**********")
         # msg: (['header', 'buffer_id', 'in_port', 'actions_len', 'pad', 'actions', 'data'])
         # data: '_value', 'enum_ref'
         # actions:'_pyof_class' --> actionheader
         #print(str(self.msg.actions[0].port))
         self.out_port = int(str(self.msg.actions[0].port))
-        print("packetout out_port: " + str(self.out_port))
+        # print("packetout out_port: " + str(self.out_port))
             #'__module__', '__doc__', 'action_type', 'length', '_allowed_types', '__init__', 
             #'get_size', 'unpack', 'get_allowed_types'
 
@@ -208,7 +225,7 @@ class Packet_controller(object):
             self.type_to_function[self.of_type]()
         else:
             print("OPenflow Message Type " + str(self.of_type) + " Not in Dict")
-            print(self.of_type)
+            pass
 
     def print_the_packet_result(self):
         print("Packet from : Controller" + str(self.source_no))

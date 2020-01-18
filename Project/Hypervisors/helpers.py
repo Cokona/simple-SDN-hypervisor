@@ -61,9 +61,10 @@ class Port(object):
         self.slice_no = None
 
     def update_mac_and_slice_no(self,mac):
-        self.connected_mac = mac
-        if self.connected_mac[0:2] == self.connected_mac[3:5]:
-            self.slice_no = string.ascii_uppercase.index(self.connected_mac[0]) + 1
+        # self.connected_mac = mac
+        # if self.connected_mac[0:2] == self.connected_mac[3:5]:
+        #     self.slice_no = string.ascii_uppercase.index(self.connected_mac[0]) + 1
             # print("MADDDDDAAAAAAFFFFFAAAAAKKKKKKKKAAAAA")
         # print("connected mac is {} with slice no {}".format(str(self.connected_mac), str(self.slice_no)))
+        pass
  
