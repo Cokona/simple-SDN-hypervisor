@@ -22,6 +22,7 @@ class Packet_switch(object):
         self.ip_dst = None
         self.of_type = None
         self.in_port = None
+        self.out_port = None
         self.eth_type = None
         self.slice_no = None
         self.dpid = None
@@ -37,8 +38,8 @@ class Packet_switch(object):
             self.parse_message(temp_switch)
         except Exception as e:
             print('EXCEPTION from Switch: ' + str(e))
-        if self.print_result:
-            self.print_the_packet_result()
+        #if self.print_result:
+            #self.print_the_packet_result()
     
     
     
@@ -79,15 +80,17 @@ class Packet_switch(object):
                     temp_switch.ports[self.in_port] = Port(self.in_port)
                 temp_switch.ports[self.in_port].update_mac_and_slice_no(self.mac_src)
             elif self.eth_type == 'ETH_TYPE_ARP':
-                print("ARP with attr: {}".format(str(eth.__dict__.keys())))
+                #print("ARP with attr: {}".format(str(eth.__dict__.keys())))
                 # self.mac_src = eth.src_s
+                pass
             elif self.eth_type == 'ETH_TYPE_IP4':
-                print("IP4 with attr: {}".format(str(eth.__dict__.keys())))
+                #print("IP4 with attr: {}".format(str(eth.__dict__.keys())))
                 # self.mac_src = eth.src_s
                 # self.mac_dst = eth.dst_s
                 # self.ip_dst = eth[ip.IP].dst_s
                 # self.ip_src = eth[ip.IP].src_s   
                 # self.slice_no = int(self.ip_src[0])
+                pass
             else:
                 print(self.eth_type)
         
@@ -167,13 +170,35 @@ class Packet_controller(object):
     def type_multipart_request(self):
         pass
     def type_flow_mod(self):
+        print("flooooooooow moooooooood")
+        # 'header', 'cookie', 'cookie_mask', 'table_id', 'command', 'idle_timeout', 
+        # 'hard_timeout', 'priority', #'buffer_id', 'out_port', 'out_group', 'flags', 
+        # 'pad', 'match', 'instructions'
+        # match: 'match_type', 'length', 'oxm_match_fields
+        #print(str(self.msg.instructions[0].instruction_type)) InstructionType.OFPIT_APPLY_ACTIONS
+        #instructions[0]: 'instruction_type', 'length', 'pad', 'actions
+        #print("match_type: " + str(self.msg.match.match_type)) #MatchType.OFPMT_OXM
+        print(str(self.msg.instructions[0].actions))#pyof.v0x04.common.action.ActionOutput object
+        self.in_port = int.from_bytes(self.msg.match.get_field(OxmOfbMatchField.OFPXMT_OFB_IN_PORT),"big")
+        #flow_match.OxmTLV objects: field, mask, value
+        print("flow mod match in_port: " + str(self.in_port))
+
         pass
     def type_hello(self):
         pass
     def type_error(self):
         pass                       
     def type_packetout(self):
-        # ADD SLICE
+        print("********packet out**********")
+        # msg: (['header', 'buffer_id', 'in_port', 'actions_len', 'pad', 'actions', 'data'])
+        # data: '_value', 'enum_ref'
+        # actions:'_pyof_class' --> actionheader
+        #print(str(self.msg.actions[0].port))
+        self.out_port = int(str(self.msg.actions[0].port))
+        print("packetout out_port: " + str(self.out_port))
+            #'__module__', '__doc__', 'action_type', 'length', '_allowed_types', '__init__', 
+            #'get_size', 'unpack', 'get_allowed_types'
+
         pass
 
     def parse_message(self):
