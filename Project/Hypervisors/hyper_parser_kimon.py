@@ -35,6 +35,7 @@ class Packet_switch(object):
                                 Type.OFPT_PACKET_IN:self.type_packetin, 
                                 Type.OFPT_FEATURES_REPLY:self.type_features_reply,
                                 Type.OFPT_ECHO_REPLY:self.type_echo_reply,
+                                Type.OFPT_PORT_STATUS:self.type_port_status,
                                 Type.OFPT_ECHO_REQUEST:self.type_echo_request,
                                 Type.OFPT_MULTIPART_REPLY:self.type_multipart_reply}
         try:
@@ -54,6 +55,9 @@ class Packet_switch(object):
     def type_multipart_reply(self,temp_switch):
         pass
     def type_hello(self,temp_switch):
+        #print("*******hello*********")
+        self.version = int(str(self.msg.header.version)))
+        
         pass
     def type_error(self,temp_switch):
         pass
@@ -131,6 +135,9 @@ class Packet_switch(object):
         #self.print_result = True
         pass
 
+    def type_port_status(self, temp_switch):
+        pass
+
     def parse_message(self,temp_switch):
         self.of_type = self.msg.header.message_type
         if self.of_type in self.type_to_function.keys():
@@ -174,7 +181,7 @@ class Packet_controller(object):
                                 Type.OFPT_ERROR:self.type_error,
                                 Type.OFPT_PACKET_OUT:self.type_packetout,
                                 Type.OFPT_FEATURES_REQUEST:self.type_features_request,
-                                Type.OFPT_PORT_STATUS:self.type_port_status,
+                                #Type.OFPT_PORT_STATUS:self.type_port_status,
                                 Type.OFPT_ECHO_REPLY:self.type_echo_reply,
                                 Type.OFPT_ECHO_REQUEST:self.type_echo_request,
                                 Type.OFPT_MULTIPART_REQUEST:self.type_multipart_request,
@@ -226,6 +233,7 @@ class Packet_controller(object):
 
         pass
     def type_hello(self):
+        self.version = int(str(self.msg.header.version)))
         pass
     def type_error(self):
         pass                       
@@ -245,9 +253,92 @@ class Packet_controller(object):
             else:
                 print("*********PACKET_OUT port (actions[0]): " + str(self.out_port))
         else:
-            print("**********PACKET_OUT actions length: " + str(action_len))
+            print(""**********PACKET_OUT actions length: " + str(action_len))
+            pass
+        
+
+        ''' parsing data'''
+
+        '''
+        try:
+            # print("Lenght of the packet is : {}".format(str(len(self.msg.data._value))))
+            if len(self.msg.data._value) > 0:
                 
-        pass
+                print("packetout msg data length: " + str(len(self.msg.data._value)))
+                print(self.msg.data._value)
+                print("packetout msg type: " + str(self.eth_type))
+                eth = ethernet.Ethernet(self.msg.data._value)
+                
+                self.eth_type = eth.type_t
+                self.print_result = False 
+                
+
+                if self.eth_type == 'ETH_TYPE_IP6':
+                    print("****packet out IPv6****")
+                    # ATTR list
+                    # print("IPv6 with attr: {}".format(str(eth.__dict__.keys())))
+                    #(['_lazy_handler_data', '_body_bytes', '_body_changed', '_header_len', '_header_cached', '_header_changed', '_unpacked', '_dst', '_src', '_type'])
+
+                    ####### TO GET ATTR FROM PACKETINS #######
+                    # print("IPv6 packet's _src: {}".format(str(eth._src)))                                         # == Address in bytes hex
+                    # print("IPv6 packet's _unpacked: {}".format(str(eth._unpacked)))                               # == TRUE
+                    # print("IPv6 packet's _lazy_handler_data: {}".format(str(eth._lazy_handler_data)))             # class and bytes
+                    # print("IPv6 packet's _lazy_handler_data's DATA: {}".format(str(eth._lazy_handler_data[1])))      # A lot of HEX Bytes
+                    # print("The lazy handler data length is: {}".format(str(len(eth._lazy_handler_data[1]))))
+
+                    self.mac_src = eth.src_s
+                    self.mac_dst = eth.dst_s
+                    self.ip_dst = eth[ip6.IP6].dst_s
+                    self.ip_src = eth[ip6.IP6].src_s
+                    pass
+                elif self.eth_type == 'ETH_TYPE_ARP':
+                    print("****packet out ARP****")
+                    print("ARP with attr: {}".format(str(eth.__dict__.keys())))
+                    self.mac_src = eth.src_s
+                    self.mac_dst = eth.dst_s
+                    self.ip_dst = eth[arp.ARP].tpa_s
+                    self.ip_src = eth[arp.ARP].spa_s
+                    self.ARP_src_mac = eth[arp.ARP].sha_s
+                    self.ARP_dst_mac = eth[arp.ARP].tha_s
+                    self.slice_no = int(self.ip_src[0])
+                    self.print_result = True
+
+                    ## COOLER IMPLEMENTATION LATER
+                    if self.in_port not in temp_switch.ports.keys():
+                        temp_switch.ports[self.in_port] = Port(self)
+                    if self.slice_no not in temp_switch.ports[self.in_port].list_of_slices:
+                        temp_switch.ports[self.in_port].list_of_slices.append(self.slice_no)
+                    print("SWITCH{}'s PORT{}'s SLICE LIST: {}".format(str(temp_switch.number),str(self.in_port),str(temp_switch.ports[self.in_port].list_of_slices)))
+
+                    pass
+                elif self.eth_type == 'ETH_TYPE_IP4':
+                    print("****packet out IPv4****")
+                    print("IP4 with attr: {}".format(str(eth.__dict__.keys())))
+                    self.mac_src = eth.src_s
+                    self.mac_dst = eth.dst_s
+                    self.ip_dst = eth[ip.IP].dst_s
+                    self.ip_src = eth[ip.IP].src_s  
+                    try:
+                        self.slice_no = int(self.ip_src[0])
+                    except Exception as e:
+                        print("Exception trying to to get the slice from ipv4: " + str(e))
+                    # if self.in_port not in temp_switch.ports.keys():
+                    #     temp_switch.ports[self.in_port] = Port(self.in_port)
+                    # temp_switch.ports[self.in_port].update_mac_and_slice_no(self.mac_src)
+                    pass
+                elif self.eth_type == 'ETH_TYPE_IP':
+                    print("****packet out IP****")
+                    # print("WHO THE FUCK??? IP with attr: {} \n".format(str(eth.__dict__.keys())))
+                    pass
+                else:
+                    print('This ETH_TYPE is not used: ' + str(self.eth_type))
+
+                # self.slice_no = temp_switch.ports[self.in_port].slice_no
+            else:
+                print("***packet out msg data length 0")
+        except Exception as e:
+                print('EXCEPTION ETH packet parsing: ' + str(e))
+        '''
 
     def parse_message(self):
         self.print_result = False
