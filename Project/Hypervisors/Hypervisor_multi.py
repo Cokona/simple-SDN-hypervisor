@@ -132,6 +132,10 @@ class TheServer:
                     self.channels[i][self.s].send(data)
                 print('Src:  SWITCH{},  Dst:  CONTROLLERs,  Packet_type: {}'.format(
                                                                     str(temp_switch.number),str(packet_info.of_type)))
+                try:
+                    temp_switch.common_message_flag[temp_switch.reset_message_flag[packet_info.of_type]] = True
+                except:
+                    pass
         else:
             for i in range(number_of_controllers):
                 if self.s in self.controller_sockets[i]:
@@ -139,10 +143,20 @@ class TheServer:
                     switch_to_send = self.proxy_port_switch_dict[self.channels[i][self.s].getpeername()[1]]
                     controller_id = i+ 1
                     if self.check_for_permission(packet_info, switch_to_send, controller_id):
-                        self.channels[i][self.s].send(data)
-                        print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
-                                                                    str(controller_id),str(switch_to_send.number),str(packet_info.of_type)))
-                        break
+                            flag_to_send = switch_to_send.common_message_flag.get(packet_info.of_type, None)
+                            if flag_to_send is None:
+                                self.channels[i][self.s].send(data)
+                                print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
+                                                                        str(controller_id),str(switch_to_send.number),str(packet_info.of_type)))
+                            elif flag_to_send is False:
+                                self.proxy_port_switch_dict[self.channels[i][self.s].getpeername()[1]].common_message_flag[packet_info.of_type] = True   
+                                self.channels[i][self.s].send(data)
+                                print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
+                                                                        str(controller_id),str(switch_to_send.number),str(packet_info.of_type))) 
+                            else:
+                                print('BLOCKED :- Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
+                                                                        str(controller_id),str(switch_to_send.number),str(packet_info.of_type)))
+
         # for p in self.proxy_port_switch_dict.values():
         #     attr = vars(p)
         #     print(', '.join("%s: %s" % item for item in attr.items()))
@@ -159,7 +173,7 @@ class TheServer:
                     return False
         else:
             return True
-        
+    
 
 
 

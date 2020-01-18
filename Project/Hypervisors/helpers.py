@@ -1,5 +1,5 @@
 import string
-
+from pyof.v0x04.common.header import Header, Type
 
 class Slice(object):
     
@@ -32,6 +32,18 @@ class Switch(object):
         self.number = number
         self.dpid = None
         self.ports = {}
+        self.common_message_flag = {Type.OFPT_HELLO:False,
+                                    Type.OFPT_ERROR:False,
+                                    Type.OFPT_FEATURES_REQUEST:False,
+                                    Type.OFPT_PORT_STATUS:False, 
+                                    Type.OFPT_MULTIPART_REQUEST:False,
+                                    Type.OFPT_ECHO_REPLY:False}
+        self.reset_message_flag = {Type.OFPT_HELLO:Type.OFPT_HELLO,
+                                    Type.OFPT_FEATURES_REPLY:Type.OFPT_FEATURES_REQUEST,
+                                    Type.OFPT_MULTIPART_REPLY:Type.OFPT_MULTIPART_REQUEST,
+                                    Type.OFPT_ECHO_REQUEST:Type.OFPT_ECHO_REPLY}
+
+
         #self.connected_port = out_port
         # self.flow_entry_max = 20
         # self.flow_entry_counter = 20

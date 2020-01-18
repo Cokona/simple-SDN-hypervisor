@@ -180,7 +180,7 @@ class Packet_controller(object):
                                 Type.OFPT_ERROR:self.type_error,
                                 Type.OFPT_PACKET_OUT:self.type_packetout,
                                 Type.OFPT_FEATURES_REQUEST:self.type_features_request,
-                                #Type.OFPT_PORT_STATUS:self.type_port_status,
+                                Type.OFPT_PORT_STATUS:self.type_port_status,
                                 Type.OFPT_ECHO_REPLY:self.type_echo_reply,
                                 Type.OFPT_ECHO_REQUEST:self.type_echo_request,
                                 Type.OFPT_MULTIPART_REQUEST:self.type_multipart_request,
