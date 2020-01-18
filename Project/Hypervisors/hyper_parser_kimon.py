@@ -59,10 +59,10 @@ class Packet_switch(object):
         self.in_port = self.msg.in_port
         try:
             # print("Lenght of the packet is : {}".format(str(len(self.msg.data._value))))
-
             eth = ethernet.Ethernet(self.msg.data._value)
             self.eth_type = eth.type_t
             self.print_result = False 
+
             if self.eth_type == 'ETH_TYPE_IP6':
                 # ATTR list
                 # print("IPv6 with attr: {}".format(str(eth.__dict__.keys())))
@@ -79,13 +79,9 @@ class Packet_switch(object):
                 self.mac_dst = eth.dst_s
                 self.ip_dst = eth[ip6.IP6].dst_s
                 self.ip_src = eth[ip6.IP6].src_s
-                # if self.in_port not in temp_switch.ports.keys():
-                #     temp_switch.ports[self.in_port] = Port(self.in_port)
-                # temp_switch.ports[self.in_port].update_mac_and_slice_no(self.mac_src)
                 pass
             elif self.eth_type == 'ETH_TYPE_ARP':
                 # print("ARP with attr: {}".format(str(eth.__dict__.keys())))
-                # self.mac_src = eth.src_s
                 self.mac_src = eth.src_s
                 self.mac_dst = eth.dst_s
                 self.ip_dst = eth[arp.ARP].tpa_s
@@ -94,26 +90,38 @@ class Packet_switch(object):
                 self.ARP_dst_mac = eth[arp.ARP].tha_s
                 self.slice_no = int(self.ip_src[0])
                 self.print_result = True
+
+                ## COOLER IMPLEMENTATION LATER
+                if self.in_port not in temp_switch.ports.keys():
+                    temp_switch.ports[self.in_port] = Port(self)
+                if self.slice_no not in temp_switch.ports[self.in_port].list_of_slices:
+                    temp_switch.ports[self.in_port].list_of_slices.append(self.slice_no)
+                print("SWITCH{}'s PORT{}'s SLICE LIST: {}".format(str(temp_switch.number),str(self.in_port),str(temp_switch.ports[self.in_port].list_of_slices)))
+
                 pass
             elif self.eth_type == 'ETH_TYPE_IP4':
-                # print("IP4 with attr: {}".format(str(eth.__dict__.keys())))
+                print("IP4 with attr: {}".format(str(eth.__dict__.keys())))
                 self.mac_src = eth.src_s
                 self.mac_dst = eth.dst_s
                 self.ip_dst = eth[ip.IP].dst_s
-                self.ip_src = eth[ip.IP].src_s   
-                self.slice_no = int(self.ip_src[0])
-
+                self.ip_src = eth[ip.IP].src_s  
+                try:
+                    self.slice_no = int(self.ip_src[0])
+                except Exception as e:
+                    print("Exception trying to to get the slice from ipv4: " + str(e))
                 # if self.in_port not in temp_switch.ports.keys():
                 #     temp_switch.ports[self.in_port] = Port(self.in_port)
                 # temp_switch.ports[self.in_port].update_mac_and_slice_no(self.mac_src)
                 pass
+            elif self.eth_type == 'ETH_TYPE_IP':
+                print("WHO THE FUCK??? IP with attr: {} \n".format(str(eth.__dict__.keys())))
             else:
                 print('This ETH_TYPE is not used: ' + str(self.eth_type))
-        
-            self.slice_no = temp_switch.ports[self.in_port].slice_no
+
+            # self.slice_no = temp_switch.ports[self.in_port].slice_no
 
         except Exception as e:
-            print(e)
+            print('EXCEPTION ETH packet parsing: ' + str(e))
     
     def type_features_reply(self,temp_switch):
         #print("From dpid " + str(self.msg.datapath_id) + " : FEATURES_REPLY")
