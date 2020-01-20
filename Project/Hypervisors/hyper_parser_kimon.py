@@ -14,8 +14,9 @@ FLOOD_PORT = 4294967291
 
 class Packet_switch(object):
     
-    def __init__(self, msg, temp_switch=None):
-
+    def __init__(self, msg, forwarder):
+        self.mac_addrlist = forwarder.mac_add
+        temp_switch = forwarder.proxy_port_switch_dict[forwarder.s.getpeername()[1]]
         self.source_no = temp_switch.number
         self.print_result = False
         self.mac_src = None
@@ -28,6 +29,7 @@ class Packet_switch(object):
         self.eth_type = None
         self.slice_no = None
         self.dpid = None
+        self.buffer_id = None
         self.ARP_src_mac = None     # recently added
         self.ARP_dst_mac = None     # recently added
         self.version = None #int
@@ -73,6 +75,7 @@ class Packet_switch(object):
         pass
     def type_packetin(self,temp_switch):
         self.in_port = self.msg.in_port
+        self.buffer_id = self.msg.buffer_id
         try:
             # print("Lenght of the packet is : {}".format(str(len(self.msg.data._value))))
             eth = ethernet.Ethernet(self.msg.data._value)
@@ -95,6 +98,8 @@ class Packet_switch(object):
                 self.mac_dst = eth.dst_s
                 self.ip_dst = eth[ip6.IP6].dst_s
                 self.ip_src = eth[ip6.IP6].src_s
+                if self.mac_src not in self.mac_addrlist:
+                    self.mac_addrlist.append(self.mac_src)
                 pass
             elif self.eth_type == 'ETH_TYPE_ARP':
                 # print("ARP with attr: {}".format(str(eth.__dict__.keys())))
@@ -206,7 +211,7 @@ class Packet_controller(object):
         self.print_result = False
         self.mac_src = None
         self.mac_dst = None
-        
+        self.buffer_id = None
         self.ip_src = None
         self.ip_dst = None
         self.of_type = None
@@ -220,7 +225,7 @@ class Packet_controller(object):
                                 Type.OFPT_ERROR:self.type_error,
                                 Type.OFPT_PACKET_OUT:self.type_packetout,
                                 Type.OFPT_FEATURES_REQUEST:self.type_features_request,
-                                #Type.OFPT_PORT_STATUS:self.type_port_status,
+                                Type.OFPT_PORT_STATUS:self.type_port_status,
                                 Type.OFPT_ECHO_REPLY:self.type_echo_reply,
                                 Type.OFPT_ECHO_REQUEST:self.type_echo_request,
                                 Type.OFPT_MULTIPART_REQUEST:self.type_multipart_request,
@@ -285,7 +290,7 @@ class Packet_controller(object):
         # action[0]:'length', 'port', 'action_type', 'max_length', 'pad'
 
         action_len = len(self.msg.actions)
-            
+        self.buffer_id = self.msg.buffer_id
         if action_len == 1:
             self.out_port = int(str(self.msg.actions[0].port))
             if self.out_port == FLOOD_PORT:

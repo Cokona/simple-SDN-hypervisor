@@ -50,6 +50,8 @@ class TheServer:
         channels.append({})
         controller_sockets.append([])
     proxy_port_switch_dict = {}
+    mac_add = []
+    temp_number = None
 
     def __init__(self, host, port):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -118,20 +120,28 @@ class TheServer:
 
     def on_recv(self):
         data = self.data
+        print(self.mac_add)
         # here we can parse and/or modify the data before send forward
         if self.s in self.switch_sockets:
             temp_switch = self.proxy_port_switch_dict[self.s.getpeername()[1]]
-            packet_info = Packet_switch(data,self.proxy_port_switch_dict[self.s.getpeername()[1]])
+            packet_info = Packet_switch(data,self)
             slice_no = packet_info.slice_no
+            if packet_info.buffer_id:
+                temp_switch.buffer_flags.append(packet_info.buffer_id)
             if slice_no:
                 self.channels[slice_no-1][self.s].send(data)
                 print('Src:  SWITCH{},  Dst:  CONTROLLER{},  Packet_type: {}'.format(
                                                                     str(temp_switch.number),str(slice_no),str(packet_info.of_type)))
+                pass
             else:
                 for i in range(number_of_controllers):
                     self.channels[i][self.s].send(data)
                 print('Src:  SWITCH{},  Dst:  CONTROLLERs,  Packet_type: {}'.format(
                                                                     str(temp_switch.number),str(packet_info.of_type)))
+                try:
+                    temp_switch.common_message_flag[temp_switch.reset_message_flag[packet_info.of_type]] = False
+                except:
+                    pass
         else:
             for i in range(number_of_controllers):
                 if self.s in self.controller_sockets[i]:
@@ -139,14 +149,30 @@ class TheServer:
                     switch_to_send = self.proxy_port_switch_dict[self.channels[i][self.s].getpeername()[1]]
                     controller_id = i+ 1
                     if self.check_for_permission(packet_info, switch_to_send, controller_id):
-                        self.channels[i][self.s].send(data)
-                        print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
-                                                                    str(controller_id),str(switch_to_send.number),str(packet_info.of_type)))
-                        break
+                            flag_to_send = switch_to_send.common_message_flag.get(packet_info.of_type, None)
+                            if packet_info.buffer_id:
+                                if packet_info.buffer_id not in switch_to_send.buffer_flags:
+                                    flag_to_send = True
+                                else:
+                                    switch_to_send.buffer_flags.remove(packet_info.buffer_id)
+                            if flag_to_send is None:
+                                self.channels[i][self.s].send(data)
+                                print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
+                                                                        str(controller_id),str(switch_to_send.number),str(packet_info.of_type)))
+                                pass
+                            elif flag_to_send is False:
+                                self.proxy_port_switch_dict[self.channels[i][self.s].getpeername()[1]].common_message_flag[packet_info.of_type] = True   
+                                self.channels[i][self.s].send(data)
+                                print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
+                                                                        str(controller_id),str(switch_to_send.number),str(packet_info.of_type))) 
+                            else:
+                                print('BLOCKED :- Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
+                                                                        str(controller_id),str(switch_to_send.number),str(packet_info.of_type)))
+                                pass
         # for p in self.proxy_port_switch_dict.values():
         #     attr = vars(p)
         #     print(', '.join("%s: %s" % item for item in attr.items()))
-
+        
 
     def check_for_permission(self, packet_info, switch_to_send, controller_id):
         port_to_send = packet_info.out_port                         # Switches output port to send or add flowmod
@@ -159,7 +185,7 @@ class TheServer:
                     return False
         else:
             return True
-        
+
 
 
 
