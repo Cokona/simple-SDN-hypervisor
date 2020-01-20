@@ -37,6 +37,7 @@ def insert_slice_rows(slice_no): #slice_no = 1, 2, 3, ...
     pass
 
 def refresh():
+    window.update()
     pass
 
 def getValue(value):
