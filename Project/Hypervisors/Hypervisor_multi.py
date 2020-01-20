@@ -120,7 +120,6 @@ class TheServer:
 
     def on_recv(self):
         data = self.data
-        print(self.mac_add)
         # here we can parse and/or modify the data before send forward
         if self.s in self.switch_sockets:
             temp_switch = self.proxy_port_switch_dict[self.s.getpeername()[1]]
