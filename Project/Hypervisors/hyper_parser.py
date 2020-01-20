@@ -174,9 +174,9 @@ class Packet_switch(object):
         pass
 
     def parse_message(self):
-        # Assıgn OF type to self
+        # Assign OF type to self
         self.of_type = self.msg.header.message_type
-        # ıf functıon for thıs OF type exısts then call thıs functıon
+        # if function for this OF type exısts then call this function
         if self.of_type in self.type_to_function.keys():
             self.type_to_function[self.of_type]()
         else:
