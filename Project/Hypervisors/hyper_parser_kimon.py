@@ -252,7 +252,7 @@ class Packet_controller(object):
     def type_multipart_request(self):
         pass
     def type_flow_mod(self):
-        # print("*************flow mod**************")
+        print("*************flow mod**************")
         # msg:  'header', 'cookie', 'cookie_mask', 'table_id', 'command', 'idle_timeout', 
         #       'hard_timeout', 'priority', #'buffer_id', 'out_port', 'out_group', 'flags', 
         #       'pad', 'match', 'instructions'
