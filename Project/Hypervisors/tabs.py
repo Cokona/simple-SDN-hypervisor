@@ -32,6 +32,11 @@ def insert_slice_rows(slice_no): #slice_no = 1, 2, 3, ...
         label_cell = Label(tab2, text="", bg="white", fg="black", padx=3, pady=3)
         label_cell.config(font=('Arial', 12))
         label_cell.grid(row=3 + 3 * (slice_no - 1), column=i, sticky="nsew", columnspan=1, rowspan=1, padx=1, pady=(1,3))
+
+
+    pass
+
+def refresh():
     pass
 
 def getValue(value):
@@ -80,6 +85,10 @@ for slice in range(1,n_slices+1):
     insert_slice_rows(slice)
     pass
 
+rows = 1 + 3 * n_slices
+
+refresh_bt = Button(tab2, text = "refresh", state = 'normal', padx = 1,pady = 3, command=refresh, fg = 'black', bg='white')
+refresh_bt.grid(row=rows+1, column=0, sticky="nsew", columnspan=1,rowspan=1, padx=1, pady=(1,3))
 tablayout.add(tab2,text="Switch Statistics")
 
 
