@@ -42,7 +42,7 @@ class Switch(object):
                                     Type.OFPT_FEATURES_REPLY:Type.OFPT_FEATURES_REQUEST,
                                     Type.OFPT_MULTIPART_REPLY:Type.OFPT_MULTIPART_REQUEST,
                                     Type.OFPT_ECHO_REQUEST:Type.OFPT_ECHO_REPLY}
-        
+        self.buffer_flags = []
 
 
         #self.connected_port = out_port
