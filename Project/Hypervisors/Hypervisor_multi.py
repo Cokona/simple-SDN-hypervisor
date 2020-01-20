@@ -147,45 +147,75 @@ class TheServer:
                 if self.s in self.controller_sockets[i]:
                     packet_info = Packet_controller(data, i)
                     switch_to_send = self.proxy_port_switch_dict[self.channels[i][self.s].getpeername()[1]]
-                    controller_id = i+ 1
+                    controller_id = i + 1
+                    # This checks for the list_of_slices to see if there is permission to send - Is it of the same slice or not
                     if self.check_for_permission(packet_info, switch_to_send, controller_id):
-                            flag_to_send = switch_to_send.common_message_flag.get(packet_info.of_type, None)
-                            if packet_info.buffer_id:
-                                if packet_info.buffer_id not in switch_to_send.buffer_flags:
-                                    flag_to_send = True
-                                else:
-                                    switch_to_send.buffer_flags.remove(packet_info.buffer_id)
-                            if flag_to_send is None:
+                        ''' 
+                        If flag_to_drop_common is None:    We do not have a conflicting COMMON packet.
+                        If flag_to_drop_common is False:   This is the first conflicting packet, send and set flag to True
+                        If flag_to_drop_common is True:    This is NOT the first instance of the conflicting COMMON packet, so duplicate message dropped
+                        If flag_to_drop_buf_id is True:    This packet_out commands to send a message that has been cleared from the switch buffer, it is dropped
+                        If flag_to_drop_buf_id is False:   This lets the message be sent if it doesn't have a buffer_id, or the buffer_id'ed message has been sent already
+                        '''
+                        flag_to_drop_common = switch_to_send.common_message_flag.get(packet_info.of_type, None)
+                        flag_to_drop_buf_id = self.check_for_duplicate_buf_id(packet_info, switch_to_send)
+                        if flag_to_drop_common is None:
+                            if not flag_to_drop_buf_id:
                                 self.channels[i][self.s].send(data)
                                 print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
-                                                                        str(controller_id),str(switch_to_send.number),str(packet_info.of_type)))
+                                        str(controller_id),str(switch_to_send.number),str(packet_info.of_type)))
                                 pass
-                            elif flag_to_send is False:
-                                self.proxy_port_switch_dict[self.channels[i][self.s].getpeername()[1]].common_message_flag[packet_info.of_type] = True   
-                                self.channels[i][self.s].send(data)
-                                print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
-                                                                        str(controller_id),str(switch_to_send.number),str(packet_info.of_type))) 
-                            else:
-                                print('BLOCKED :- Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
-                                                                        str(controller_id),str(switch_to_send.number),str(packet_info.of_type)))
-                                pass
-        # for p in self.proxy_port_switch_dict.values():
-        #     attr = vars(p)
-        #     print(', '.join("%s: %s" % item for item in attr.items()))
-        
+                        elif flag_to_drop_common is False:
+                            self.proxy_port_switch_dict[self.channels[i][self.s].getpeername()[1]].common_message_flag[packet_info.of_type] = True   
+                            self.channels[i][self.s].send(data)
+                            print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
+                                    str(controller_id),str(switch_to_send.number),str(packet_info.of_type))) 
+                        else:
+                            print('Duplicate Message Dropped - Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
+                                    str(controller_id),str(switch_to_send.number),str(packet_info.of_type)))
+                            pass
+                    else:
+                        print("Access Denied: from CONTR{} to port{} of Switch{} of type:{}".format(
+                                str(controller_id), str(packet_info.out_port), str(switch_to_send.number), str(packet_info.of_type)))
+
 
     def check_for_permission(self, packet_info, switch_to_send, controller_id):
-        port_to_send = packet_info.out_port                         # Switches output port to send or add flowmod
-        if port_to_send and port_to_send != FLOOD_PORT:             # if Packet_out/Flow_mod/Stats_request
-            port = switch_to_send.ports.get(port_to_send, None)     
-            if port:                                                # If Port exists in the switch
-                if controller_id in port.list_of_slices:                     # If port has the registered slice (Happens with ARP messages)
+        '''
+        This function checks flow_mod and Packet_out messages for the slices
+        This will return a True (permission to send) if the message.out_port has the slice which we are sending from.
+        Switches output port to send or add flowmod
+        '''
+        
+        port_to_send = packet_info.out_port
+        #if packet is one of: Packet_out/Flow_mod/Stats_request AND out_port is not FLOOD
+        if port_to_send and port_to_send != FLOOD_PORT:
+            port = switch_to_send.ports.get(port_to_send, None)
+            # If Port has been registered in the switch
+            if port:
+                # If port has the registered slice (it is first registered with ARP messages)
+                if controller_id in port.list_of_slices:
                     return True
                 else:
                     return False
         else:
             return True
 
+    def check_for_duplicate_buf_id(self, packet_info, switch_to_send):
+        '''
+        This fucntion checks for messages that have a buffer_ID and are sent multiple times, so we want to drop all but the first instacnce of this
+        This fucntion is only called when a message arrives from the controller, so it can be a packet_out but not a packet_in
+        If there is a buffer_id it will check if this message has been received and forwarded before
+        If yes it will return a flag_to_drop_buf_id as True
+        If no it will return a  and remove the buffer_id from the list
+        '''
+        if packet_info.buffer_id:
+            if packet_info.buffer_id not in switch_to_send.buffer_flags:
+                return True
+            else:  # ADD COUNTER
+                switch_to_send.buffer_flags.remove(packet_info.buffer_id)
+                return False
+        else:
+            return False
 
 
 
