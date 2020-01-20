@@ -133,7 +133,7 @@ class TheServer:
                 print('Src:  SWITCH{},  Dst:  CONTROLLERs,  Packet_type: {}'.format(
                                                                     str(temp_switch.number),str(packet_info.of_type)))
                 try:
-                    temp_switch.common_message_flag[temp_switch.reset_message_flag[packet_info.of_type]] = True
+                    temp_switch.common_message_flag[temp_switch.reset_message_flag[packet_info.of_type]] = False
                 except:
                     pass
         else:
