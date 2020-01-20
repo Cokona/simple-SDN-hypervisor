@@ -29,9 +29,12 @@ class Slice(object):
 class Switch(object):
 
     def __init__(self,number):
+        # Swıtch number assıgned when ınıtıated ın the proxy_port_to_swıtch dıct ın maın 
         self.number = number
         self.dpid = None
+        # thıs ıs added when we have a arp message - check hyper parser packet ın
         self.ports = {}
+        # for checkıng duplıcate common messages
         self.common_message_flag = {Type.OFPT_HELLO:False,
                                     Type.OFPT_ERROR:False,
                                     Type.OFPT_FEATURES_REQUEST:False,
@@ -42,36 +45,40 @@ class Switch(object):
                                     Type.OFPT_FEATURES_REPLY:Type.OFPT_FEATURES_REQUEST,
                                     Type.OFPT_MULTIPART_REPLY:Type.OFPT_MULTIPART_REQUEST,
                                     Type.OFPT_ECHO_REQUEST:Type.OFPT_ECHO_REPLY}
+        # has a lıst of actıve buffer ıds
         self.buffer_flags = []
 
 
-        #self.connected_port = out_port
-        # self.flow_entry_max = 20
-        # self.flow_entry_counter = 20
+        self.flow_entry_max = 20
+        self.flow_entry_counter = 20
 
-    # def flow_add(self):
-    #     if self.flow_entry_counter < self.flow_entry_max:
-    #         self.flow_entry_counter += 1
-    #     else:
-    #         ##cannot write into the switch's flow table
-    #         #send error msg back
-    #         pass
+    def flow_add(self):
+        if self.flow_entry_counter < self.flow_entry_max:
+            self.flow_entry_counter += 1
+        else:
+            ##cannot write into the switch's flow table
+            #send error msg back
+            pass
 
-    # def flow_remove(self):
-    #     if self.flow_entry_counter > 0:
-    #         self.flow_entry_counter -= 1
-    #     else:
-    #         ##cannot remove from the switch's flow table
-    #         #send error msg back
-    #         pass
+    def flow_remove(self):
+        if self.flow_entry_counter > 0:
+            self.flow_entry_counter -= 1
+        else:
+            ##cannot remove from the switch's flow table
+            #send error msg back
+            pass
 
 class Port(object):
 
     def __init__(self, packet):
+        # thıs object ıs ın the swıtches dıctıonary 
         self.port_no = packet.in_port
         self.connected_mac = packet.mac_src
         self.list_of_slices = [packet.slice_no]
         self.connected_ip = packet.ip_src
+
+
+        # shıt reserved for mac fılterıng
 
     # # # # # # # # def update_mac_and_slice_no(self,mac):
     # # # # # # # #     # self.connected_mac = mac
