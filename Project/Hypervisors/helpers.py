@@ -50,11 +50,12 @@ class Switch(object):
 
 
         self.flow_entry_max = 20
-        self.flow_entry_counter = 20
+        self.flow_entry_counter = 0
 
     def flow_add(self):
         if self.flow_entry_counter < self.flow_entry_max:
             self.flow_entry_counter += 1
+            print('Switch:{}, No of flows: {}'.format(str(self.number), str(self.flow_entry_counter)))
         else:
             ##cannot write into the switch's flow table
             #send error msg back

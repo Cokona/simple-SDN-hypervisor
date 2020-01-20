@@ -8,6 +8,7 @@ import sys
 from helpers import Switch, Slice
 import pyof
 from pyof.v0x04.common.utils import unpack_message
+from pyof.v0x04.common.header import Header, Type
 from hyper_parser_kimon import Packet_controller, Packet_switch
 
 
@@ -51,7 +52,8 @@ class TheServer:
         controller_sockets.append([])
     proxy_port_switch_dict = {}
     mac_add = []
-    temp_number = None
+    temp_switch = None
+    
 
     def __init__(self, host, port):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -122,33 +124,35 @@ class TheServer:
         data = self.data
         # here we can parse and/or modify the data before send forward
         if self.s in self.switch_sockets:
-            temp_switch = self.proxy_port_switch_dict[self.s.getpeername()[1]]
+            self.temp_switch = self.proxy_port_switch_dict[self.s.getpeername()[1]]
             packet_info = Packet_switch(data,self)
             slice_no = packet_info.slice_no
             if packet_info.buffer_id:
-                temp_switch.buffer_flags.append(packet_info.buffer_id)
+                self.temp_switch.buffer_flags.append(packet_info.buffer_id)
             if slice_no:
                 self.channels[slice_no-1][self.s].send(data)
-                print('Src:  SWITCH{},  Dst:  CONTROLLER{},  Packet_type: {}'.format(
-                                                                    str(temp_switch.number),str(slice_no),str(packet_info.of_type)))
+                self.update_counters(packet_info)
+                # print('Src:  SWITCH{},  Dst:  CONTROLLER{},  Packet_type: {}'.format(
+                #                                                     str(self.temp_switch.number),str(slice_no),str(packet_info.of_type)))
                 pass
             else:
                 for i in range(number_of_controllers):
                     self.channels[i][self.s].send(data)
-                print('Src:  SWITCH{},  Dst:  CONTROLLERs,  Packet_type: {}'.format(
-                                                                    str(temp_switch.number),str(packet_info.of_type)))
+                    self.update_counters(packet_info)
+                # print('Src:  SWITCH{},  Dst:  CONTROLLERs,  Packet_type: {}'.format(
+                #                                                     str(self.temp_switch.number),str(packet_info.of_type)))
                 try:
-                    temp_switch.common_message_flag[temp_switch.reset_message_flag[packet_info.of_type]] = False
+                    self.temp_switch.common_message_flag[self.temp_switch.reset_message_flag[packet_info.of_type]] = False
                 except:
                     pass
         else:
             for i in range(number_of_controllers):
                 if self.s in self.controller_sockets[i]:
-                    packet_info = Packet_controller(data, i)
-                    switch_to_send = self.proxy_port_switch_dict[self.channels[i][self.s].getpeername()[1]]
                     controller_id = i + 1
+                    self.temp_switch = self.proxy_port_switch_dict[self.channels[i][self.s].getpeername()[1]]
+                    packet_info = Packet_controller(data, controller_id, self)
                     # This checks for the list_of_slices to see if there is permission to send - Is it of the same slice or not
-                    if self.check_for_permission(packet_info, switch_to_send, controller_id):
+                    if self.check_for_permission(packet_info,controller_id):
                         ''' 
                         If flag_to_drop_common is None:    We do not have a conflicting COMMON packet.
                         If flag_to_drop_common is False:   This is the first conflicting packet, send and set flag to True
@@ -156,29 +160,31 @@ class TheServer:
                         If flag_to_drop_buf_id is True:    This packet_out commands to send a message that has been cleared from the switch buffer, it is dropped
                         If flag_to_drop_buf_id is False:   This lets the message be sent if it doesn't have a buffer_id, or the buffer_id'ed message has been sent already
                         '''
-                        flag_to_drop_common = switch_to_send.common_message_flag.get(packet_info.of_type, None)
-                        flag_to_drop_buf_id = self.check_for_duplicate_buf_id(packet_info, switch_to_send)
+                        flag_to_drop_common = self.temp_switch.common_message_flag.get(packet_info.of_type, None)
+                        flag_to_drop_buf_id = self.check_for_duplicate_buf_id(packet_info)
                         if flag_to_drop_common is None:
                             if not flag_to_drop_buf_id:
                                 self.channels[i][self.s].send(data)
-                                print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
-                                        str(controller_id),str(switch_to_send.number),str(packet_info.of_type)))
+                                self.update_counters(packet_info)
+                                # print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
+                                #         str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
                                 pass
                         elif flag_to_drop_common is False:
                             self.proxy_port_switch_dict[self.channels[i][self.s].getpeername()[1]].common_message_flag[packet_info.of_type] = True   
                             self.channels[i][self.s].send(data)
-                            print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
-                                    str(controller_id),str(switch_to_send.number),str(packet_info.of_type))) 
+                            self.update_counters(packet_info)
+                            # print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
+                            #         str(controller_id),str(self.temp_switch.number),str(packet_info.of_type))) 
                         else:
                             print('Duplicate Message Dropped - Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
-                                    str(controller_id),str(switch_to_send.number),str(packet_info.of_type)))
+                                    str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
                             pass
                     else:
                         print("Access Denied: from CONTR{} to port{} of Switch{} of type:{}".format(
-                                str(controller_id), str(packet_info.out_port), str(switch_to_send.number), str(packet_info.of_type)))
+                                str(controller_id), str(packet_info.out_port), str(self.temp_switch.number), str(packet_info.of_type)))
 
 
-    def check_for_permission(self, packet_info, switch_to_send, controller_id):
+    def check_for_permission(self, packet_info, controller_id):
         '''
         This function checks flow_mod and Packet_out messages for the slices
         This will return a True (permission to send) if the message.out_port has the slice which we are sending from.
@@ -188,7 +194,7 @@ class TheServer:
         port_to_send = packet_info.out_port
         #if packet is one of: Packet_out/Flow_mod/Stats_request AND out_port is not FLOOD
         if port_to_send and port_to_send != FLOOD_PORT:
-            port = switch_to_send.ports.get(port_to_send, None)
+            port = self.temp_switch.ports.get(port_to_send, None)
             # If Port has been registered in the switch
             if port:
                 # If port has the registered slice (it is first registered with ARP messages)
@@ -199,7 +205,7 @@ class TheServer:
         else:
             return True
 
-    def check_for_duplicate_buf_id(self, packet_info, switch_to_send):
+    def check_for_duplicate_buf_id(self, packet_info):
         '''
         This fucntion checks for messages that have a buffer_ID and are sent multiple times, so we want to drop all but the first instacnce of this
         This fucntion is only called when a message arrives from the controller, so it can be a packet_out but not a packet_in
@@ -208,14 +214,19 @@ class TheServer:
         If no it will return a  and remove the buffer_id from the list
         '''
         if packet_info.buffer_id:
-            if packet_info.buffer_id not in switch_to_send.buffer_flags:
+            if packet_info.buffer_id not in self.temp_switch.buffer_flags:
                 return True
             else:  # ADD COUNTER
-                switch_to_send.buffer_flags.remove(packet_info.buffer_id)
+                self.temp_switch.buffer_flags.remove(packet_info.buffer_id)
                 return False
         else:
             return False
 
+    def update_counters(self, packet_info):
+        if packet_info.of_type is Type.OFPT_FLOW_MOD:
+            self.temp_switch.flow_add()
+        elif packet_info.of_type is Type.OFPT_FLOW_REMOVED:
+            self.temp_switch.flow_remove()
 
 
 def show_exception_and_exit(exc_type, exc_value, tb):
