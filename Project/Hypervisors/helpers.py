@@ -50,24 +50,35 @@ class Switch(object):
 
 
         self.flow_entry_max = 20
-        self.flow_entry_counter = {}
-        for i in range(1,forwarder.number_of_controllers):
-            self.flow_entry_counter[i] = 0
+        # self.flow_entry_counter = {}
+        self.flow_match_entries = {}
+        for i in range(1,forwarder.number_of_controllers+1):
+            self.flow_match_entries[i] = []
 
-    def flow_add(self, slice_no):
-        if self.flow_entry_counter[slice_no] < self.flow_entry_max:
-            self.flow_entry_counter[slice_no] += 1
-            print('Switch:{}, No of flows: {} for slice {}'.format(str(self.number), str(self.flow_entry_counter[slice_no])))
+    def flow_add(self, packet_info):
+        no_of_flow_entries = len(self.flow_match_entries[packet_info.slice_no])
+        if no_of_flow_entries < self.flow_entry_max:
+            self.flow_match_entries[packet_info.slice_no].append(packet_info.match_field)
+            print('Switch:{}, No of flows: {} for slice {}'.format(str(self.number), str(no_of_flow_entries), str(packet_info.slice_no)))
+            if packet_info.match_field in self.flow_match_entries[packet_info.slice_no]:
+                print("A flowmod with the same exact match fields is being added ????????? CHECK IT OUT")
         else:
             print("Raise flag for max entires")
             pass
 
-    def flow_remove(self,slice_no):
-        if self.flow_entry_counter > 0:
-            self.flow_entry_counter -= 1
+    def flow_remove(self,packet_info):
+        no_of_flow_entries = len(self.flow_match_entries[packet_info.slice_no])
+        if no_of_flow_entries > 0:
+            if packet_info.match_field in self.flow_match_entries[packet_info.slice_no]:
+                self.flow_match_entries[packet_info.slice_no].remove(packet_info.match_field)
+            else:
+                ##cannot remove from the switch's flow table
+                #send error msg back
+                print("SIGNIFICANT ERROR, SWITCH{} is trying to remove flow from slice{} that doesn't match the one in its entries!!!".format(
+                    str(self.number),str(packet_info.slice_no)))
+                pass
         else:
-            ##cannot remove from the switch's flow table
-            #send error msg back
+            print("Flow_remove DOES NOT HAVE any entries to remove")
             pass
 
 class Port(object):
