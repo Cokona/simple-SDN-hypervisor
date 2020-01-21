@@ -21,8 +21,8 @@ class MyTopo(Topo):
 	def __init__(self):
 		"Create custom topo."
 		
-		no_of_slices = 1
-		no_of_switches = 1
+		no_of_slices = 4
+		no_of_switches = 6
 		switch_dict = {}
 		host_dict = {}
 		for ind_sl in range(no_of_slices):
