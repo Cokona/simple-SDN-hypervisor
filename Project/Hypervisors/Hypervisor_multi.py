@@ -10,6 +10,7 @@ import pyof
 from pyof.v0x04.common.utils import unpack_message
 from pyof.v0x04.common.header import Header, Type
 from hyper_parser_kimon import Packet_controller, Packet_switch
+from tabs_gui import Gui
 
 
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
@@ -61,6 +62,8 @@ class TheServer:
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind((host, port))
         self.server.listen(200)     # !NOTE Reconsider 200
+        gui = Gui(self.number_of_controllers,3,self.proxy_port_switch_dict.values())
+        gui.mainloop()
         
 
     def main_loop(self):
@@ -167,14 +170,14 @@ class TheServer:
                         if flag_to_drop_common is None:
                             if not flag_to_drop_buf_id:
                                 self.channels[i][self.s].send(data)
-                                self.update_counters(packet_info)
+                                self.update_counters(packet_info,controller_id=controller_id)
                                 # print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
                                 #         str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
                                 pass
                         elif flag_to_drop_common is False:
                             self.proxy_port_switch_dict[self.channels[i][self.s].getpeername()[1]].common_message_flag[packet_info.of_type] = True   
                             self.channels[i][self.s].send(data)
-                            self.update_counters(packet_info)
+                            self.update_counters(packet_info,controller_id=controller_id)
                             # print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
                             #         str(controller_id),str(self.temp_switch.number),str(packet_info.of_type))) 
                         else:
@@ -224,11 +227,11 @@ class TheServer:
         else:
             return False
 
-    def update_counters(self, packet_info):
+    def update_counters(self, packet_info,controller_id=None):
         if packet_info.of_type is Type.OFPT_FLOW_MOD:
-            self.temp_switch.flow_add()
+            self.temp_switch.flow_add(controller_id)
         elif packet_info.of_type is Type.OFPT_FLOW_REMOVED:
-            self.temp_switch.flow_remove()
+            self.temp_switch.flow_remove(controller_id)
 
 
 def show_exception_and_exit(exc_type, exc_value, tb):

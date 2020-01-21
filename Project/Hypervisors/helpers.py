@@ -71,6 +71,8 @@ class Switch(object):
         if no_of_flow_entries > 0:
             if packet_info.match_field in self.flow_match_entries[packet_info.slice_no]:
                 self.flow_match_entries[packet_info.slice_no].remove(packet_info.match_field)
+                print("Flow Removed for switch {} from slice {}".format(str(self.number), str(packet_info.slice_no)))
+                print("New number of flows are {} ".format(str(len(self.flow_match_entries[packet_info.slice_no]))))
             else:
                 ##cannot remove from the switch's flow table
                 #send error msg back
