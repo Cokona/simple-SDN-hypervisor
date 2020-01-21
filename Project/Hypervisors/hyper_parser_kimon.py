@@ -38,7 +38,8 @@ class Packet_switch(object):
                                 Type.OFPT_ECHO_REPLY:self.type_echo_reply,
                                 Type.OFPT_PORT_STATUS:self.type_port_status,
                                 Type.OFPT_ECHO_REQUEST:self.type_echo_request,
-                                Type.OFPT_MULTIPART_REPLY:self.type_multipart_reply}
+                                Type.OFPT_MULTIPART_REPLY:self.type_multipart_reply,
+                                Type.OFPT_FLOW_REMOVED:self.type_flow_removed}
         try:
             self.msg = unpack_message(msg)
             self.parse_message()
@@ -48,7 +49,8 @@ class Packet_switch(object):
             self.print_the_packet_result()
     
     
-    
+    def type_flow_removed(self):
+        pass
     def type_echo_reply(self):
         pass
     def type_echo_request(self):
@@ -210,8 +212,9 @@ class Packet_switch(object):
 
 class Packet_controller(object):
     
-    def __init__(self, msg, controller_id):
+    def __init__(self, msg, controller_id, forwarder):
         
+        self.temp_switch = forwarder.temp_switch
         self.source_no = controller_id
         self.print_result = False
         self.mac_src = None
@@ -276,8 +279,7 @@ class Packet_controller(object):
             pass
 
         self.in_port = int.from_bytes(self.msg.match.get_field(OxmOfbMatchField.OFPXMT_OFB_IN_PORT),"big")
-
-
+        
         pass
     def type_hello(self):
         self.version = int(str(self.msg.header.version))
