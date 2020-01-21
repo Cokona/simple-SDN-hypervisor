@@ -28,9 +28,9 @@ class Slice(object):
 
 class Switch(object):
 
-    def __init__(self,number):
+    def __init__(self,forwarder):
         # Swıtch number assıgned when ınıtıated ın the proxy_port_to_swıtch dıct ın maın 
-        self.number = number
+        self.number = len(forwarder.proxy_port_switch_dict)+1
         self.dpid = None
         # thıs ıs added when we have a arp message - check hyper parser packet ın
         self.ports = {}
@@ -50,18 +50,20 @@ class Switch(object):
 
 
         self.flow_entry_max = 20
-        self.flow_entry_counter = 0
+        self.flow_entry_counter = {}
+        for i in range(1,forwarder.number_of_controllers):
+            self.flow_entry_counter[i] = 0
 
-    def flow_add(self):
-        if self.flow_entry_counter < self.flow_entry_max:
-            self.flow_entry_counter += 1
-            print('Switch:{}, No of flows: {}'.format(str(self.number), str(self.flow_entry_counter)))
+    def flow_add(self, slice_no):
+        if self.flow_entry_counter[slice_no] < self.flow_entry_max:
+            self.flow_entry_counter[slice_no] += 1
+            print('Switch:{}, No of flows: {} for slice '.format(str(self.number), str(self.flow_entry_counter)))
         else:
             ##cannot write into the switch's flow table
             #send error msg back
             pass
 
-    def flow_remove(self):
+    def flow_remove(self,slice_no):
         if self.flow_entry_counter > 0:
             self.flow_entry_counter -= 1
         else:

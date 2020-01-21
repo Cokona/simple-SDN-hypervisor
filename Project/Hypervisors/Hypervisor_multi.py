@@ -43,23 +43,25 @@ class Forward:
 
 
 class TheServer:
-    input_list = []
-    switch_sockets = []
-    controller_sockets = []
-    channels = []
-    for i in range(number_of_controllers):
-        channels.append({})
-        controller_sockets.append([])
-    proxy_port_switch_dict = {}
-    mac_add = []
-    temp_switch = None
     
-
     def __init__(self, host, port):
+        self.number_of_controllers = number_of_controllers
+        self.input_list = []
+        self.switch_sockets = []
+        self.controller_sockets = []
+        self.channels = []
+        for _ in range(self.number_of_controllers):
+            self.channels.append({})
+            self.controller_sockets.append([])
+        self.proxy_port_switch_dict = {}
+        self.mac_add = []
+        self.temp_switch = None
+        # Here we create the server instance and bind it to port 
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind((host, port))
         self.server.listen(200)     # !NOTE Reconsider 200
+        
 
     def main_loop(self):
         self.input_list.append(self.server)
@@ -81,17 +83,17 @@ class TheServer:
 
     def on_accept(self):
         forwarders = []
-        for i in range(number_of_controllers):
+        for i in range(self.number_of_controllers):
             forwarders.append(Forward().start(controller_addresses[i][0], controller_addresses[i][1]))
             self.controller_sockets[i].append(forwarders[i])
         clientsock, clientaddr = self.server.accept()
         self.switch_sockets.append(clientsock)
-        self.proxy_port_switch_dict[clientsock.getpeername()[1]]= Switch(len(self.proxy_port_switch_dict)+1)
+        self.proxy_port_switch_dict[clientsock.getpeername()[1]]= Switch(self)
         if forwarders[0]:
             try:
                 print(str(clientaddr) + " has connected")
                 self.input_list.append(clientsock)
-                for i in range(number_of_controllers):
+                for i in range(self.number_of_controllers):
                     self.input_list.append(forwarders[i])
                     self.channels[i][clientsock] = forwarders[i]
                     self.channels[i][forwarders[i]] = clientsock
@@ -108,7 +110,7 @@ class TheServer:
         self.input_list.remove(self.s)
         self.switch_sockets.remove(self.s)
         del self.proxy_port_switch_dict[self.s.getpeername()[1]]
-        for i in range(number_of_controllers):
+        for i in range(self.number_of_controllers):
             self.input_list.remove(self.channels[i][self.s])
             out = self.channels[i][self.s]
             # close the connection with remote server
@@ -136,7 +138,7 @@ class TheServer:
                 #                                                     str(self.temp_switch.number),str(slice_no),str(packet_info.of_type)))
                 pass
             else:
-                for i in range(number_of_controllers):
+                for i in range(self.number_of_controllers):
                     self.channels[i][self.s].send(data)
                     self.update_counters(packet_info)
                 # print('Src:  SWITCH{},  Dst:  CONTROLLERs,  Packet_type: {}'.format(
@@ -146,7 +148,7 @@ class TheServer:
                 except:
                     pass
         else:
-            for i in range(number_of_controllers):
+            for i in range(self.number_of_controllers):
                 if self.s in self.controller_sockets[i]:
                     controller_id = i + 1
                     self.temp_switch = self.proxy_port_switch_dict[self.channels[i][self.s].getpeername()[1]]
