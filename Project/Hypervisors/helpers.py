@@ -57,10 +57,9 @@ class Switch(object):
     def flow_add(self, slice_no):
         if self.flow_entry_counter[slice_no] < self.flow_entry_max:
             self.flow_entry_counter[slice_no] += 1
-            print('Switch:{}, No of flows: {} for slice '.format(str(self.number), str(self.flow_entry_counter)))
+            print('Switch:{}, No of flows: {} for slice {}'.format(str(self.number), str(self.flow_entry_counter[slice_no])))
         else:
-            ##cannot write into the switch's flow table
-            #send error msg back
+            print("Raise flag for max entires")
             pass
 
     def flow_remove(self,slice_no):
