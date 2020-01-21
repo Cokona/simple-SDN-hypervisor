@@ -52,6 +52,7 @@ class Packet_switch(object):
     
     def type_flow_removed(self):
         self.match_field = self.msg.match
+        print('FLOW REMOVED MESSAGE')
         pass
     def type_echo_reply(self):
         pass
@@ -266,7 +267,7 @@ class Packet_controller(object):
         
         # instructions[0]: 'instruction_type', 'length', 'pad', 'actions
         instruction_len = len(self.msg.instructions)
-        self.match_field = self.msg.match_field
+        self.match_field = self.msg.match
         if instruction_len == 1:
             action_len = len(self.msg.instructions[0].actions)
             
