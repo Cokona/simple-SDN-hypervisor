@@ -40,7 +40,7 @@ class Gui(object):
                 # Check contents of message and do what it says
                 # As a test, we simply print it
                 
-                #self.update_refresh()
+                self.update_refresh()
             except queue.Empty:
                 pass
 
@@ -57,6 +57,7 @@ class Gui(object):
 
         for slicer in range(1,self.n_slices+1):
             self.insert_slice_rows(slicer)
+        self.window.update()
         pass
 
     def test_change_value(self):
@@ -99,8 +100,8 @@ class Gui(object):
             label_sw.grid(row=0, column=col+1, sticky="nsew", columnspan=1,rowspan=1, padx=1, pady=(1,3))
             self.tab2.grid_columnconfigure(col+1, weight=1)
 
-        for slice in range(1,self.n_slices+1):
-            self.insert_slice_rows(slice)
+        for slicer in range(1,self.n_slices+1):
+            self.insert_slice_rows(slicer)
             pass
 
         rows = 1 + 3 * self.n_slices
