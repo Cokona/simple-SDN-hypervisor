@@ -36,13 +36,14 @@ class Gui(object):
         """
         while self.queue.qsize():
             try:
-                msg = self.queue.get(0)
+                self.switches = self.queue.get(0)
                 # Check contents of message and do what it says
                 # As a test, we simply print it
-                print (msg)
+                
+                #self.update_refresh()
             except queue.Empty:
                 pass
-            
+
     def update(self):
         print("Called update")
         self.window.update()
@@ -54,15 +55,15 @@ class Gui(object):
         # self.window.update()
         #self.window.after(500, refresh)
 
-        for slice in range(1,self.n_slices+1):
-            self.insert_slice_rows(slice)
-            pass
+        for slicer in range(1,self.n_slices+1):
+            self.insert_slice_rows(slicer)
         pass
 
     def test_change_value(self):
         self.ports = "a,b,c"
         # print(self.ports)
         pass
+    
 
     def getValue(self):
         pass
@@ -138,14 +139,14 @@ class Gui(object):
                 text = ""
             else:
                 text = []
-                ports =  self.switches[col-1].ports
+                ports =  list(self.switches[col-2].ports.values())
                 for port in ports:
                     if slice_no in port.list_of_slices:
-                        text.append(port_no)
+                        text.append(port.number)
                     else:
                         pass
                 
-            port = self.switches
+            #port = self.switches
             label_cell.config(text = str(text))
             label_cell.grid(row=1 + 3 * (slice_no - 1), column=col, sticky="nsew", columnspan=1, rowspan=1,
                             padx=1, pady=1)

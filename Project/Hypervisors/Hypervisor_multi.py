@@ -20,20 +20,9 @@ import threading
 buffer_size = 1024
 delay = 0.0001
 
-#modified by duan 01/22
-number_of_controllers = 2
-number_of_switches = 3
-if len(sys.argv)>1:
-    number_of_controllers = int(sys.argv[1])
-else:
-    number_of_controllers = 2
 
-if len(sys.argv)>2:
-    number_of_switches =  int(sys.argv[2])
-else:
-    number_of_switches = 3
-#print(len(sys.argv)) = 2  WHY??? should be 3
-
+number_of_controllers = int(sys.argv[1])
+number_of_switches =  int(sys.argv[2])
 
 
 
@@ -216,7 +205,7 @@ class TheServer:
                     else:
                         print("Access Denied: from CONTR{} to port{} of Switch{} of type:{}".format(
                                 str(controller_id), str(packet_info.out_port), str(self.temp_switch.number), str(packet_info.of_type)))
-        self.queue.put(packet_info.of_type)
+        self.queue.put(list(self.proxy_port_switch_dict.values()))
 
     def check_for_permission(self, packet_info, controller_id):
         '''
