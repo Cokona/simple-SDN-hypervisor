@@ -58,12 +58,15 @@ class Switch(object):
     def flow_add(self, packet_info,controller_id):
         no_of_flow_entries = len(self.flow_match_entries[controller_id])
         if no_of_flow_entries < self.flow_entry_max:
-            if packet_info.match_field in self.flow_match_entries[controller_id]:
-                print("A flowmod with the same exact match fields is being added ????????? CHECK IT OUT")
-            self.flow_match_entries[controller_id].append(packet_info.match_field)
-            no_of_flow_entries = len(self.flow_match_entries[controller_id])
-            print('Switch:{}, No of flows: {} for slice {}'.format(str(self.number), str(no_of_flow_entries), str(controller_id)))
-
+            if packet_info.match_field:
+                if packet_info.match_field not in self.flow_match_entries[controller_id]:
+                    self.flow_match_entries[controller_id].append(packet_info.match_field)
+                    no_of_flow_entries = len(self.flow_match_entries[controller_id])
+                    print('Switch:{}, No of flows: {} for slice {}'.format(str(self.number), str(no_of_flow_entries), str(controller_id)))
+                else:
+                    print("A flowmod with the same exact match fields is being added ????????? CHECK IT OUT")
+            else: 
+                print("Flow_add error, This message does not have a match field to be added")
         else:
             print("Raise flag for max entires")
             pass

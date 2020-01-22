@@ -137,15 +137,15 @@ class TheServer:
             if slice_no:
                 self.channels[slice_no-1][self.s].send(data)
                 self.update_counters(packet_info)
-                # print('Src:  SWITCH{},  Dst:  CONTROLLER{},  Packet_type: {}'.format(
-                #                                                     str(self.temp_switch.number),str(slice_no),str(packet_info.of_type)))
+                print('Src:  SWITCH{},  Dst:  CONTROLLER{},  Packet_type: {}'.format(
+                                                                    str(self.temp_switch.number),str(slice_no),str(packet_info.of_type)))
                 pass
             else:
                 for i in range(self.number_of_controllers):
                     self.channels[i][self.s].send(data)
                     self.update_counters(packet_info)
-                # print('Src:  SWITCH{},  Dst:  CONTROLLERs,  Packet_type: {}'.format(
-                #                                                     str(self.temp_switch.number),str(packet_info.of_type)))
+                print('Src:  SWITCH{},  Dst:  CONTROLLERs,  Packet_type: {}'.format(
+                                                                    str(self.temp_switch.number),str(packet_info.of_type)))
                 try:
                     self.temp_switch.common_message_flag[self.temp_switch.reset_message_flag[packet_info.of_type]] = False
                 except:
@@ -171,15 +171,15 @@ class TheServer:
                             if not flag_to_drop_buf_id:
                                 self.channels[i][self.s].send(data)
                                 self.update_counters(packet_info,controller_id=controller_id)
-                                # print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
-                                #         str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
+                                print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
+                                        str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
                                 pass
                         elif flag_to_drop_common is False:
                             self.proxy_port_switch_dict[self.channels[i][self.s].getpeername()[1]].common_message_flag[packet_info.of_type] = True   
                             self.channels[i][self.s].send(data)
                             self.update_counters(packet_info,controller_id=controller_id)
-                            # print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
-                            #         str(controller_id),str(self.temp_switch.number),str(packet_info.of_type))) 
+                            print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
+                                    str(controller_id),str(self.temp_switch.number),str(packet_info.of_type))) 
                         else:
                             print('Duplicate Message Dropped - Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
                                     str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
