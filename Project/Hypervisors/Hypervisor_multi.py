@@ -17,7 +17,25 @@ from hyper_parser_kimon import Packet_controller, Packet_switch
 # But when buffer get to high or delay go too down, you can broke things
 buffer_size = 1024
 delay = 0.0001
-number_of_controllers = int(sys.argv[1])
+
+#modified by duan 01/22
+number_of_controllers = 2
+number_of_switches = 3
+if len(sys.argv)>1:
+    number_of_controllers = int(sys.argv[1])
+else:
+    number_of_controllers = 2
+
+if len(sys.argv)>2:
+    number_of_switches =  int(sys.argv[2])
+else:
+    number_of_switches = 3
+#print(len(sys.argv)) = 2  WHY??? should be 3
+
+
+
+
+
 controller_addresses = []
 
 FLOOD_PORT = 4294967291

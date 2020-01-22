@@ -189,6 +189,16 @@ class Gui(object):
         self.tablayout.pack(fill="both")
 
 
-gui = Gui(number_of_controllers,number_of_switches,[]) #server.proxy_port_switch_dict.values()
-gui.update()
+gui = Gui(Hypervisor_multi.number_of_controllers,Hypervisor_multi.number_of_switches,[]) #server.proxy_port_switch_dict.values()
+flag = True
+def set_flag(flag): #set flag when on recv
+    if flag is True:
+        flag = False
+    else:
+        flag = True
+while flag:
+    gui.update()
+    set_flag(flag)
+
+
 
