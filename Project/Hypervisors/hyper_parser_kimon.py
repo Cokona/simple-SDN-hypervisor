@@ -110,8 +110,6 @@ class Packet_switch(object):
                 self.mac_dst = eth.dst_s
                 self.ip_dst = eth[arp.ARP].tpa_s
                 self.ip_src = eth[arp.ARP].spa_s
-                self.ARP_src_mac = eth[arp.ARP].sha_s
-                self.ARP_dst_mac = eth[arp.ARP].tha_s
                 self.slice_no = int(self.ip_src[0])
                 self.print_result = False
 
@@ -120,7 +118,7 @@ class Packet_switch(object):
                     self.temp_switch.ports[self.in_port] = Port(self)
                 if self.slice_no not in self.temp_switch.ports[self.in_port].list_of_slices:
                     self.temp_switch.ports[self.in_port].list_of_slices.append(self.slice_no)
-                # print("SWITCH{}'s PORT{}'s SLICE LIST: {}".format(str(temp_switch.number),str(self.in_port),str(temp_switch.ports[self.in_port].list_of_slices)))
+                print("SWITCH{}'s PORT{}'s SLICE LIST: {}".format(str(self.temp_switch.number),str(self.in_port),str(self.temp_switch.ports[self.in_port].list_of_slices)))
 
                 pass
             elif self.eth_type == 'ETH_TYPE_IP4':
@@ -142,6 +140,7 @@ class Packet_switch(object):
                 self.ip_dst = eth[ip.IP].dst_s
                 self.ip_src = eth[ip.IP].src_s  
                 self.slice_no = int(self.ip_src[0])
+                self.print_result = False
                 pass
             else:
                 print('This ETH_TYPE is not used: ' + str(self.eth_type))
@@ -209,9 +208,6 @@ class Packet_switch(object):
         print("IP Dest : " + str(self.ip_dst) )
         print("Slice : " + str(self.slice_no) )
         # print("DPID : " + str(self.dpid))
-        print("ARP Source mac : " + str(self.ARP_src_mac))
-        print("ARP Destination mac : " + str(self.ARP_dst_mac))
-
 
 class Packet_controller(object):
     
@@ -259,7 +255,7 @@ class Packet_controller(object):
     def type_multipart_request(self):
         pass
     def type_flow_mod(self):
-        print("*************flow mod**************")
+        # print("*************flow mod**************")
         # msg:  'header', 'cookie', 'cookie_mask', 'table_id', 'command', 'idle_timeout', 
         #       'hard_timeout', 'priority', #'buffer_id', 'out_port', 'out_group', 'flags', 
         #       'pad', 'match', 'instructions'
@@ -268,6 +264,7 @@ class Packet_controller(object):
         # instructions[0]: 'instruction_type', 'length', 'pad', 'actions
         instruction_len = len(self.msg.instructions)
         self.match_field = self.msg.match
+        
         if instruction_len == 1:
             action_len = len(self.msg.instructions[0].actions)
             
@@ -281,10 +278,12 @@ class Packet_controller(object):
         else:
             print("************flow mod instructions length  = " + str(instruction_len))
             pass
-
-        self.in_port = int.from_bytes(self.msg.match.get_field(OxmOfbMatchField.OFPXMT_OFB_IN_PORT),"big")
-        
+        try:
+            self.in_port = int.from_bytes(self.msg.match.get_field(OxmOfbMatchField.OFPXMT_OFB_IN_PORT),"big")
+        except Exception as e:
+            print("There is a problem with the last line of flow_mod parsing, exception:{}".format(str(e)))
         pass
+
     def type_hello(self):
         self.version = int(str(self.msg.header.version))
         #header: 'version', 'message_type', 'length', 'xid'
