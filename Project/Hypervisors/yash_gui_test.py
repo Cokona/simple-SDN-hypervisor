@@ -40,7 +40,7 @@ class Gui(object):
                 # Check contents of message and do what it says
                 # As a test, we simply print it
                 #print(self.switches)
-                #self.update_refresh()
+                self.update_refresh()
             except queue.Empty:
                 pass
 
@@ -54,12 +54,12 @@ class Gui(object):
         #label1.configure(text='Balance :$' + str(max_amount))
         # self.window.update()
         #self.window.after(500, refresh)
-        print("Update Refresh Called")
+        #print("Update Refresh Called")
         for slicer in range(1,self.n_slices+1):
             self.insert_slice_rows(slicer)
-        print("Slices Inserted")
+        #print("Slices Inserted")
         self.window.update()
-        print("Window Updated")
+        #print("Window Updated")
         pass
 
     def test_change_value(self):
@@ -145,7 +145,7 @@ class Gui(object):
                 ports =  list(self.switches[col-2].ports.values())
                 for port in ports:
                     if slice_no in port.list_of_slices:
-                        text += ", " + str(port.port_no)
+                        text += str(port.port_no) + ", "
                     else:
                         pass
                 
