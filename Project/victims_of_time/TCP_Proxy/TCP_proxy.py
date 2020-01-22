@@ -22,19 +22,32 @@ def print_packet(binary_packet, source):
         #if binary_packet[0] == 4:
             #try:
         msg = unpack_message(binary_packet)
+<<<<<<< HEAD:Project/victims_of_time/TCP_Proxy/TCP_proxy.py
+=======
+        
+>>>>>>> 8c51f4c344bd4f4b795645bae34dcf5099e3cb68:Project/Hypervisors/TCP_proxy.py
         if msg.header.message_type is Type.OFPT_HELLO:
             print("From " + source + ": OFPT_HELLO")
+            # header(version, message_type, length, xid), elements(_pyof_class)
             pass
-        elif str(msg.header.message_type) == 'Type.OFPT_ERROR':
+        elif msg.header.message_type is Type.OFPT_ERROR:
             print("From " + source + ': OFPT_ERROR')
             pass
-        elif str(msg.header.message_type) == 'Type.OFPT_PACKET_IN':
-            print("From " + source + ': PACKET_IN')
-            print(str(msg.reason))
+        elif msg.header.message_type is Type.OFPT_PACKET_IN:
+            print("From in_port no " + str(msg.in_port) + ': PACKET_IN')
+           
+            # header, buffer_id, in_port, actions_len, pad, actions, data
+            #print(str(msg.header.__dict__.keys()))
             pass
-        elif str(msg.header.message_type) == 'Type.OFPT_PACKET_OUT':
+        elif msg.header.message_type is Type.OFPT_PACKET_OUT:
             print("From " + source + ': PACKET_OUT')
             #print(str(msg.reason))
+            #header, buffer_id, total_len, reason, table_id, cookie, match, pad, data
+            pass
+        elif msg.header.message_type is Type.OFPT_FEATURES_REPLY:
+            print("From dpip " + str(msg.datapath_id) + ': Features_REPLY')
+            #print(str(msg.reason))
+            #header, buffer_id, total_len, reason, table_id, cookie, match, pad, data
             pass
         else:
             print("From " + source +  " : " + str(msg.header.message_type))          
