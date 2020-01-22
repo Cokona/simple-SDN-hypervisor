@@ -1,8 +1,9 @@
 from tkinter import *
 from tkinter.ttk import Notebook,Entry
+import queue
 
 class Gui(object):
-    def __init__(self, master,  number_of_slices, number_of_switches, switches):
+    def __init__(self, master, queue, number_of_slices, number_of_switches, switches):
         #test value
         self.ports = "1,2,3"
 
@@ -12,7 +13,7 @@ class Gui(object):
         self.n_slices = number_of_slices
         self.n_switches = number_of_switches
 
-        self.window = Tk()
+        self.window = master
         self.window.title("SDN hypervisor API")
         self.window.geometry("600x400")
 
@@ -28,14 +29,20 @@ class Gui(object):
         self.create_tab_1()
         self.create_tab_2()
         self.create_tab_3()
-        self.window.update()
-        self.window.after(10, self.update)
-
-
-
-
-
-
+        
+    def processIncoming(self):
+        """
+        Handle all the messages currently in the queue (if any).
+        """
+        while self.queue.qsize():
+            try:
+                msg = self.queue.get(0)
+                # Check contents of message and do what it says
+                # As a test, we simply print it
+                print (msg)
+            except queue.Empty:
+                pass
+            
     def update(self):
         print("Called update")
         self.window.update()

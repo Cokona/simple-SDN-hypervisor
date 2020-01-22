@@ -10,8 +10,10 @@ import pyof
 from pyof.v0x04.common.utils import unpack_message
 from pyof.v0x04.common.header import Header, Type
 from hyper_parser_kimon import Packet_controller, Packet_switch
-# from tabs_gui import Gui
-
+import queue
+from tkinter import *
+from yash_gui_test import Gui
+import threading
 
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
 # But when buffer get to high or delay go too down, you can broke things
@@ -63,7 +65,9 @@ class Forward:
 
 class TheServer:
     
-    def __init__(self, host, port):
+    def __init__(self, host, port,master):
+        self.master = master
+        self.queue = queue.Queue()
         self.number_of_controllers = number_of_controllers
         self.input_list = []
         self.switch_sockets = []
@@ -80,9 +84,16 @@ class TheServer:
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind((host, port))
         self.server.listen(200)     # !NOTE Reconsider 200
-        # gui = Gui(self.number_of_controllers,3,self.proxy_port_switch_dict.values())
+        self.gui = Gui(self.master, self.queue,self.number_of_controllers,3,self.proxy_port_switch_dict.values())
         # gui.mainloop()
+        self.periodicCall()
         
+    def periodicCall(self):
+        """
+        Check every 100 ms if there is something new in the queue.
+        """
+        self.gui.processIncoming()
+        self.master.after(100, self.periodicCall)
 
     def main_loop(self):
         self.input_list.append(self.server)
@@ -205,7 +216,7 @@ class TheServer:
                     else:
                         print("Access Denied: from CONTR{} to port{} of Switch{} of type:{}".format(
                                 str(controller_id), str(packet_info.out_port), str(self.temp_switch.number), str(packet_info.of_type)))
-
+        self.queue.put(packet_info.of_type)
 
     def check_for_permission(self, packet_info, controller_id):
         '''
@@ -259,10 +270,13 @@ def show_exception_and_exit(exc_type, exc_value, tb):
     sys.exit(-1)
        
 if __name__ == '__main__':
-        server = TheServer(hypervisor_address[0],hypervisor_address[1])
-        sys.excepthook = show_exception_and_exit      
-        try:
-            server.main_loop()
-        except KeyboardInterrupt:
-            print("Ctrl C - Stopping server")
-            sys.exit(1)
+    root = Tk()
+    server = TheServer(hypervisor_address[0],hypervisor_address[1],root)
+    sys.excepthook = show_exception_and_exit
+    thread1 = threading.Thread(target=server.main_loop)      
+    try:
+        thread1.start()
+        root.mainloop()
+    except KeyboardInterrupt:
+        print("Ctrl C - Stopping server")
+        sys.exit(1)
