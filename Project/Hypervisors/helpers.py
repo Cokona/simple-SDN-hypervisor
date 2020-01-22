@@ -31,7 +31,7 @@ class Switch(object):
     def __init__(self,forwarder):
         # Switch number assigned when initiated in the proxy_port_to_switch dict in main 
         self.number = len(forwarder.proxy_port_switch_dict)+1
-        self.dpid = None
+        self.dpid = '0'
         # this is added when we have a arp message - check hyper parser packet in
         self.ports = {}
         # for checking duplicate common messages

@@ -161,8 +161,9 @@ class Packet_switch(object):
         #self.reserved=int(str(self.msg.reserved))
         
         #'header', 'datapath_id', 'n_buffers', 'n_tables', 'auxiliary_id', 'pad', 'capabilities', 'reserved'
-        self.dpid = self.msg.datapath_id
-        self.temp_switch.dpid = self.dpid
+        self.dpid = self.msg.datapath_id._value
+        self.temp_switch.dpid = str(self.dpid)[-1]
+        print('******************************DPID*************{}'.format(str(self.dpid)[-1]))
         #self.print_result = True
         pass
 

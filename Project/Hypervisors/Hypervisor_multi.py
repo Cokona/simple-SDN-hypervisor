@@ -84,7 +84,11 @@ class TheServer:
         """
         Check every 100 ms if there is something new in the queue.
         """
-        self.queue.put(list(self.proxy_port_switch_dict.values()))
+        switch_list = list(self.proxy_port_switch_dict.values())
+        switch_list.sort(key=lambda x : int(x.dpid), reverse=False)
+        for switcher in switch_list:
+            print(switcher.dpid)
+        self.queue.put(switch_list)
         self.gui.processIncoming()
         self.master.after(5000, self.periodicCall)
 
