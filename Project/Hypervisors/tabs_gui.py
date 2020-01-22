@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter.ttk import Notebook,Entry
+import Hypervisor_multi
 
 class Gui(object):
     def __init__(self, number_of_slices, number_of_switches, switches):
@@ -38,7 +39,7 @@ class Gui(object):
         print("Called update")
         self.window.update()
 
-    def update(self):
+    def refresh(self):
         # print("update")
         #label1.configure(text='Balance :$' + str(max_amount))
         # self.window.update()
@@ -94,8 +95,8 @@ class Gui(object):
 
         rows = 1 + 3 * self.n_slices
 
-        update_bt = Button(self.tab2, text = "update", state = 'normal', padx = 1,pady = 3, command=self.update, fg = 'black', bg='white')
-        update_bt.grid(row=rows+1, column=0, sticky="nsew", columnspan=1,rowspan=1, padx=1, pady=(1,3))
+        refresh_bt = Button(self.tab2, text = "refresh", state = 'normal', padx = 1,pady = 3, command=self.refresh, fg = 'black', bg='white')
+        refresh_bt.grid(row=rows+1, column=0, sticky="nsew", columnspan=1,rowspan=1, padx=1, pady=(1,3))
         self.tablayout.add(self.tab2,text="Switch Statistics")
 
         change_value_bt = Button(self.tab2, text="change values", state='normal', padx=1, pady=3, command=self.test_change_value, fg='black',
@@ -188,6 +189,16 @@ class Gui(object):
         self.tablayout.pack(fill="both")
 
 
-# gui = Gui(2,3,0)
-# gui.mainloop()
+gui = Gui(Hypervisor_multi.number_of_controllers,Hypervisor_multi.number_of_switches,[]) #server.proxy_port_switch_dict.values()
+flag = True
+def set_flag(flag): #set flag when on recv
+    if flag is True:
+        flag = False
+    else:
+        flag = True
+while flag:
+    gui.update()
+    set_flag(flag)
+
+
 
