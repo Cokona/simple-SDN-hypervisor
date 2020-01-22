@@ -47,6 +47,7 @@ class TheServer:
     
     def __init__(self, host, port):
         self.number_of_controllers = number_of_controllers
+        self.flow_entry_max = 20
         self.input_list = []
         self.switch_sockets = []
         self.controller_sockets = []
@@ -57,6 +58,7 @@ class TheServer:
         self.proxy_port_switch_dict = {}
         self.mac_add = []
         self.temp_switch = None
+        
         # Here we create the server instance and bind it to port 
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -136,20 +138,23 @@ class TheServer:
                 self.temp_switch.buffer_flags.append(packet_info.buffer_id)
             if slice_no:
                 self.channels[slice_no-1][self.s].send(data)
-                self.update_counters(packet_info)
                 print('Src:  SWITCH{},  Dst:  CONTROLLER{},  Packet_type: {}'.format(
                                                                     str(self.temp_switch.number),str(slice_no),str(packet_info.of_type)))
-                pass
             else:
-                for i in range(self.number_of_controllers):
-                    self.channels[i][self.s].send(data)
-                    self.update_counters(packet_info)
-                print('Src:  SWITCH{},  Dst:  CONTROLLERs,  Packet_type: {}'.format(
-                                                                    str(self.temp_switch.number),str(packet_info.of_type)))
-                try:
-                    self.temp_switch.common_message_flag[self.temp_switch.reset_message_flag[packet_info.of_type]] = False
-                except:
-                    pass
+                if packet_info.of_type is Type.OFPT_FLOW_REMOVED:    # special case of Flow-Removed
+                    check_for_flow_remove_flag = self.update_counters(self, packet_info)
+                    if check_for_flow_remove_flag[0]:
+                        self.channels[check_for_flow_remove_flag[1]-1][self.s].send(data)
+
+                else:
+                    for i in range(self.number_of_controllers):
+                        self.channels[i][self.s].send(data)
+                    print('Src:  SWITCH{},  Dst:  CONTROLLERs,  Packet_type: {}'.format(
+                                                                        str(self.temp_switch.number),str(packet_info.of_type)))
+                    try:
+                        self.temp_switch.common_message_flag[self.temp_switch.reset_message_flag[packet_info.of_type]] = False
+                    except:
+                        pass
         else:
             for i in range(self.number_of_controllers):
                 if self.s in self.controller_sockets[i]:
@@ -169,17 +174,15 @@ class TheServer:
                         flag_to_drop_buf_id = self.check_for_duplicate_buf_id(packet_info)
                         if flag_to_drop_common is None:
                             if not flag_to_drop_buf_id:
-                                self.channels[i][self.s].send(data)
-                                self.update_counters(packet_info,controller_id=controller_id)
-                                print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
-                                        str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
-                                pass
+                                if self.update_counters(packet_info,controller_id=controller_id):
+                                    self.channels[i][self.s].send(data)
+                                    print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
+                                            str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
                         elif flag_to_drop_common is False:
                             self.proxy_port_switch_dict[self.channels[i][self.s].getpeername()[1]].common_message_flag[packet_info.of_type] = True   
                             self.channels[i][self.s].send(data)
-                            self.update_counters(packet_info,controller_id=controller_id)
                             print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
-                                    str(controller_id),str(self.temp_switch.number),str(packet_info.of_type))) 
+                                    str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
                         else:
                             print('Duplicate Message Dropped - Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
                                     str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
@@ -229,9 +232,11 @@ class TheServer:
 
     def update_counters(self, packet_info,controller_id=None):
         if packet_info.of_type is Type.OFPT_FLOW_MOD:
-            self.temp_switch.flow_add(packet_info,controller_id)
+            return self.temp_switch.flow_add(packet_info,controller_id)
         elif packet_info.of_type is Type.OFPT_FLOW_REMOVED:
-            self.temp_switch.flow_remove(packet_info)
+            return self.temp_switch.flow_remove(packet_info)
+        else:
+            return True
 
 
 def show_exception_and_exit(exc_type, exc_value, tb):

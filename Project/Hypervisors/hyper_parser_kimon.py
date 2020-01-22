@@ -111,7 +111,7 @@ class Packet_switch(object):
                 self.ip_dst = eth[arp.ARP].tpa_s
                 self.ip_src = eth[arp.ARP].spa_s
                 self.slice_no = int(self.ip_src[0])
-                self.print_result = True
+                self.print_result = False
 
                 ## COOLER IMPLEMENTATION LATER
                 if self.in_port not in self.temp_switch.ports.keys():
@@ -255,7 +255,7 @@ class Packet_controller(object):
     def type_multipart_request(self):
         pass
     def type_flow_mod(self):
-        print("*************flow mod**************")
+        # print("*************flow mod**************")
         # msg:  'header', 'cookie', 'cookie_mask', 'table_id', 'command', 'idle_timeout', 
         #       'hard_timeout', 'priority', #'buffer_id', 'out_port', 'out_group', 'flags', 
         #       'pad', 'match', 'instructions'

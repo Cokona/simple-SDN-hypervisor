@@ -49,51 +49,55 @@ class Switch(object):
         self.buffer_flags = []
 
 
-        self.flow_entry_max = 20
-        # self.flow_entry_counter = {}
+        self.flow_entry_max = forwarder.flow_entry_max
+        self.no_of_flow_entries = {}
         self.flow_match_entries = {}
         for i in range(1,forwarder.number_of_controllers+1):
             self.flow_match_entries[i] = []
+            self.no_of_flow_entries[i] = 0
 
-    def flow_add(self, packet_info,controller_id):
-        no_of_flow_entries = len(self.flow_match_entries[controller_id])
-        if no_of_flow_entries < self.flow_entry_max:
+    def flow_add(self, packet_info, controller_id):
+        if self.no_of_flow_entries[controller_id] < self.flow_entry_max:
             if packet_info.match_field:
                 if packet_info.match_field not in self.flow_match_entries[controller_id]:
                     self.flow_match_entries[controller_id].append(packet_info.match_field)
-                    no_of_flow_entries = len(self.flow_match_entries[controller_id])
-                    print('Switch:{}, No of flows: {} for slice {}'.format(str(self.number), str(no_of_flow_entries), str(controller_id)))
+                    self.no_of_flow_entries[controller_id] = len(self.flow_match_entries[controller_id])
+                    print('Switch:{}, No of flows: {} for slice {}'.format(str(self.number), str(self.no_of_flow_entries[controller_id]), str(controller_id)))
+                    return True
                 else:
                     print("A flowmod with the same exact match fields is being added ????????? CHECK IT OUT")
+                    return False
             else: 
                 print("Flow_add error, This message does not have a match field to be added")
+                return False
         else:
             print("Raise flag for max entires")
-            pass
+            return False
 
-    def flow_remove(self,packet_info):
+    def flow_remove(self, packet_info):
         for slice_no_from_enries in range(1,len(self.flow_match_entries)+1):
             if packet_info.match_field in self.flow_match_entries[slice_no_from_enries]:
                 break
             elif slice_no_from_enries is len(self.flow_match_entries):
                 print('There is a problem with the flow remove logic - Trying to find the slice')
+                return [ False, slice_no_from_enries]
 
-        no_of_flow_entries = len(self.flow_match_entries[slice_no_from_enries])
-
-        if no_of_flow_entries > 0:
+        if self.no_of_flow_entries[slice_no_from_enries] > 0:
             if packet_info.match_field in self.flow_match_entries[slice_no_from_enries]:
                 self.flow_match_entries[slice_no_from_enries].remove(packet_info.match_field)
+                self.no_of_flow_entries[slice_no_from_enries] -= 1
                 print("Flow Removed for switch {} from slice {}".format(str(self.number), str(slice_no_from_enries)))
-                print("New number of flows are {} ".format(str(len(self.flow_match_entries[slice_no_from_enries]))))
+                print("New number of flows are {} ".format(str(self.no_of_flow_entries[slice_no_from_enries])))
+                return [True, slice_no_from_enries]
             else:
                 ##cannot remove from the switch's flow table
                 #send error msg back
                 print("SIGNIFICANT ERROR, SWITCH{} is trying to remove flow from slice{} that doesn't match the one in its entries!!!".format(
                     str(self.number),str(slice_no_from_enries)))
-                pass
+                return [False, slice_no_from_enries]
         else:
             print("Flow_remove DOES NOT HAVE any entries to remove")
-            pass
+            return [False, slice_no_from_enries]
 
 class Port(object):
 
