@@ -45,7 +45,7 @@ class Gui(object):
                 pass
 
     def update(self):
-        print("Called update")
+        #print("Called update")
         self.window.update()
         #self.window.after(500, refresh)
 
@@ -133,11 +133,8 @@ class Gui(object):
         update_bt.grid(row=rows+1, column=0, sticky="nsew", columnspan=1,rowspan=1, padx=1, pady=(1,3))
         self.tablayout.add(self.tab2,text="Switch Statistics")
 
-        change_value_bt = Button(self.tab2, text="change values", state='normal', padx=1, pady=3, command=self.test_change_value, fg='black',
-                            bg='white')
-        change_value_bt.grid(row=rows + 1, column=1, sticky="nsew", columnspan=1, rowspan=1, padx=1, pady=(1, 3))
+        
 
-        self.tablayout.add(self.tab2, text="Switch Statistics")
 
 
 
@@ -149,39 +146,41 @@ class Gui(object):
         
 
         for col in range(2, 2 + self.n_switches):
-            label_cell = Label(self.tab2, text= "", bg="white", fg="black", padx=3, pady=3)
-            label_cell.config(font=('Arial', 12))
-            if len(self.switches) < col -1:
-                text = ""
-            else:
-                text = ""
-                ports =  list(self.switches[col-2].ports.values())
-                for port in ports:
-                    if slicer in port.list_of_slices:
-                        text += str(port.port_no) + ", "
-                    else:
-                        pass
-                
-            #port = self.switches
-            label_cell.config(text = str(text))
-            label_cell.grid(row=2 * (slicer - 1) + 1, column=col, sticky="nsew", columnspan=1, rowspan=1,
-                            padx=1, pady=1)
-
-        
-
-        # for i in range(2, 2 + self.n_switches):
-        #     label_cell_max_flow = Label(self.tab2, text="", bg="white", fg="black", padx=3, pady=3)
-        #     label_cell_max_flow.config(font=('Arial', 12))
-        #     label_cell_max_flow.grid(row=2 + 3 * (slice_no - 1), column=i, sticky="nsew", columnspan=1, rowspan=1,
-        #                     padx=1, pady=1)
-
-        
-
-        # for i in range(2, 2 + self.n_switches):
+            label_cell_port = Label(self.tab2, text= "", bg="white", fg="black", padx=3, pady=3)
+            label_cell_port.config(font=('Arial', 12))
             label_cell_no_flow = Label(self.tab2, text="", bg="white", fg="black", padx=3, pady=3)
             label_cell_no_flow.config(font=('Arial', 12))
+            
+            if len(self.switches) < col -1:
+                text_port = ""
+                text_flow = ""
+                #getting flows
+                
+            else:
+                text_port = ""
+                text_flow = str(self.switches[col-2].no_of_flow_entries[slicer])
+                ports =  list(self.switches[col-2].ports.values())
+                for port in ports:
+                    #getting ports for the slice
+                    if slicer in port.list_of_slices:
+                        text_port += str(port.port_no) + ", "
+                    else:
+                        pass
+            
+
+                
+            #port = self.switches
+            label_cell_port.config(text = str(text_port))
+            label_cell_port.grid(row=2 * (slicer - 1) + 1, column=col, sticky="nsew", columnspan=1, rowspan=1,
+                            padx=1, pady=1)
+            label_cell_no_flow.config(text = str(text_flow))
             label_cell_no_flow.grid(row=2 * (slicer - 1) + 2, column=col, sticky="nsew", columnspan=1, rowspan=1,
                             padx=1, pady=(1, 3))
+
+        
+            
+
+            
 
 
     def create_tab_3(self):
