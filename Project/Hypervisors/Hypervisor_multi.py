@@ -18,7 +18,7 @@ import threading
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
 # But when buffer get to high or delay go too down, you can broke things
 buffer_size = 1024
-delay = 0.0001
+delay = 0.0002
 
 
 number_of_controllers = int(sys.argv[1])
@@ -86,8 +86,6 @@ class TheServer:
         """
         switch_list = list(self.proxy_port_switch_dict.values())
         switch_list.sort(key=lambda x : int(x.dpid), reverse=False)
-        for switcher in switch_list:
-            print(switcher.dpid)
         self.queue.put(switch_list)
         self.gui.processIncoming()
         self.master.after(5000, self.periodicCall)
@@ -162,8 +160,8 @@ class TheServer:
                 self.temp_switch.buffer_flags.append(packet_info.buffer_id)
             if slice_no:
                 self.channels[slice_no-1][self.s].send(data)
-                print('Src:  SWITCH{},  Dst:  CONTROLLER{},  Packet_type: {}'.format(
-                                                                    str(self.temp_switch.number),str(slice_no),str(packet_info.of_type)))
+                # print('Src:  SWITCH{},  Dst:  CONTROLLER{},  Packet_type: {}'.format(
+                #                                                     str(self.temp_switch.number),str(slice_no),str(packet_info.of_type)))
             else:
                 if packet_info.of_type is Type.OFPT_FLOW_REMOVED:    # special case of Flow-Removed
                     check_for_flow_remove_flag = self.update_counters(self, packet_info)
@@ -173,8 +171,8 @@ class TheServer:
                 else:
                     for i in range(self.number_of_controllers):
                         self.channels[i][self.s].send(data)
-                    print('Src:  SWITCH{},  Dst:  CONTROLLERs,  Packet_type: {}'.format(
-                                                                        str(self.temp_switch.number),str(packet_info.of_type)))
+                    # print('Src:  SWITCH{},  Dst:  CONTROLLERs,  Packet_type: {}'.format(
+                    #                                                     str(self.temp_switch.number),str(packet_info.of_type)))
                     try:
                         self.temp_switch.common_message_flag[self.temp_switch.reset_message_flag[packet_info.of_type]] = False
                     except:
@@ -200,16 +198,16 @@ class TheServer:
                             if not flag_to_drop_buf_id:
                                 if self.update_counters(packet_info,controller_id=controller_id):
                                     self.channels[i][self.s].send(data)
-                                    print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
-                                            str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
+                                    # print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
+                                    #         str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
                         elif flag_to_drop_common is False:
                             self.proxy_port_switch_dict[self.channels[i][self.s].getpeername()[1]].common_message_flag[packet_info.of_type] = True   
                             self.channels[i][self.s].send(data)
-                            print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
-                                    str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
+                            # print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
+                            #         str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
                         else:
-                            print('Duplicate Message Dropped - Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
-                                    str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
+                            # print('Duplicate Message Dropped - Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
+                            #         str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
                             pass
                     else:
                         print("Access Denied: from CONTR{} to port{} of Switch{} of type:{}".format(

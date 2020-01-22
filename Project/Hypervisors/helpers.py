@@ -62,7 +62,7 @@ class Switch(object):
                 if packet_info.match_field not in self.flow_match_entries[controller_id]:
                     self.flow_match_entries[controller_id].append(packet_info.match_field)
                     self.no_of_flow_entries[controller_id] = len(self.flow_match_entries[controller_id])
-                    print('Switch:{}, No of flows: {} for slice {}'.format(str(self.number), str(self.no_of_flow_entries[controller_id]), str(controller_id)))
+                    #print('Switch:{}, No of flows: {} for slice {}'.format(str(self.number), str(self.no_of_flow_entries[controller_id]), str(controller_id)))
                     return True
                 else:
                     print("A flowmod with the same exact match fields is being added ????????? CHECK IT OUT")

@@ -43,9 +43,13 @@ class Packet_switch(object):
                                 Type.OFPT_FLOW_REMOVED:self.type_flow_removed}
         try:
             self.msg = unpack_message(msg)
+        except Exception as e:
+            print('EXCEPTION from Switch in Unpack_meesage: ' + str(e))
+        try:
             self.parse_message()
         except Exception as e:
-            print('EXCEPTION from Switch: ' + str(e))
+            print('EXCEPTION from Switch in Parse_message: ' + str(e))
+
         if self.print_result:
             self.print_the_packet_result()
     
@@ -118,7 +122,7 @@ class Packet_switch(object):
                     self.temp_switch.ports[self.in_port] = Port(self)
                 if self.slice_no not in self.temp_switch.ports[self.in_port].list_of_slices:
                     self.temp_switch.ports[self.in_port].list_of_slices.append(self.slice_no)
-                print("SWITCH{}'s PORT{}'s SLICE LIST: {}".format(str(self.temp_switch.number),str(self.in_port),str(self.temp_switch.ports[self.in_port].list_of_slices)))
+                #print("SWITCH{}'s PORT{}'s SLICE LIST: {}".format(str(self.temp_switch.number),str(self.in_port),str(self.temp_switch.ports[self.in_port].list_of_slices)))
 
                 pass
             elif self.eth_type == 'ETH_TYPE_IP4':
@@ -163,7 +167,6 @@ class Packet_switch(object):
         #'header', 'datapath_id', 'n_buffers', 'n_tables', 'auxiliary_id', 'pad', 'capabilities', 'reserved'
         self.dpid = self.msg.datapath_id._value
         self.temp_switch.dpid = str(self.dpid)[-1]
-        print('******************************DPID*************{}'.format(str(self.dpid)[-1]))
         #self.print_result = True
         pass
 
