@@ -34,11 +34,12 @@ class Gui(object):
 
 
 
-    def mainloop(self):
-        self.window.mainloop()
+    def update(self):
+        print("Called update")
+        self.window.update()
 
     def update(self):
-        print("update")
+        # print("update")
         #label1.configure(text='Balance :$' + str(max_amount))
         # self.window.update()
         #self.window.after(500, refresh)
@@ -50,7 +51,7 @@ class Gui(object):
 
     def test_change_value(self):
         self.ports = "a,b,c"
-        print(self.ports)
+        # print(self.ports)
         pass
 
     def getValue(self):
@@ -120,10 +121,23 @@ class Gui(object):
         label_ports.grid(row=3 * (slice_no - 1) + 1, column=1, sticky="nsew", columnspan=1, rowspan=1, padx=1,
                          pady=1)
 
-        for i in range(2, 2 + self.n_switches):
-            label_cell = Label(self.tab2, text=self.ports, bg="white", fg="black", padx=3, pady=3)
+        for col in range(2, 2 + self.n_switches):
+            label_cell = Label(self.tab2, text= "", bg="white", fg="black", padx=3, pady=3)
             label_cell.config(font=('Arial', 12))
-            label_cell.grid(row=1 + 3 * (slice_no - 1), column=i, sticky="nsew", columnspan=1, rowspan=1,
+            if len(self.switches) < col -1:
+                text = ""
+            else:
+                text = []
+                ports =  self.switches[col-1].ports
+                for port in ports:
+                    if slice_no in port.list_of_slices:
+                        text.append(port_no)
+                    else:
+                        pass
+                
+            port = self.switches
+            label_cell.config(text = str(text))
+            label_cell.grid(row=1 + 3 * (slice_no - 1), column=col, sticky="nsew", columnspan=1, rowspan=1,
                             padx=1, pady=1)
 
         label_maxflows = Label(self.tab2, text="max flow entries", bg="white", fg="black", padx=3, pady=3)
@@ -174,6 +188,6 @@ class Gui(object):
         self.tablayout.pack(fill="both")
 
 
-gui = Gui(2,3,0)
-gui.mainloop()
+# gui = Gui(2,3,0)
+# gui.mainloop()
 
