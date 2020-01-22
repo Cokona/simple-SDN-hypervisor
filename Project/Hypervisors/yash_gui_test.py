@@ -101,8 +101,29 @@ class Gui(object):
             label_sw.config(font=('Arial', 12))
             label_sw.grid(row=0, column=col+1, sticky="nsew", columnspan=1,rowspan=1, padx=1, pady=(1,3))
             self.tab2.grid_columnconfigure(col+1, weight=1)
+        
+        
 
         for slicer in range(1,self.n_slices+1):
+            label_slice = Label(self.tab2, text="Slice " + str(slicer), bg="#0059b3", fg="white", padx=3, pady=3)
+            label_slice.config(font=('Arial', 12))
+            label_slice.grid(row=2 * (slicer - 1) + 1, column=0, sticky="nsew", columnspan=1, rowspan=2, padx=1,
+                            pady=(1, 3))
+
+            label_ports = Label(self.tab2, text="ports", bg="white", fg="black", padx=3, pady=3)
+            label_ports.config(font=('Arial', 12))
+            label_ports.grid(row=2 * (slicer - 1) + 1, column=1, sticky="nsew", columnspan=1, rowspan=1, padx=1,
+                            pady=1)
+
+            label_n_flows = Label(self.tab2, text="# flow entries", bg="white", fg="black", padx=3, pady=3)
+            label_n_flows.config(font=('Arial', 12))
+            label_n_flows.grid(row=2 * (slicer - 1) + 2, column=1, sticky="nsew", columnspan=1, rowspan=1,
+                            padx=1, pady=(1, 3))
+
+            # label_maxflows = Label(self.tab2, text="max flow entries", bg="white", fg="black", padx=3, pady=3)
+            # label_maxflows.config(font=('Arial', 12))
+            # label_maxflows.grid(row=2 + 3 * (slicer - 1), column=1, sticky="nsew", columnspan=1, rowspan=1,
+            #                     padx=1, pady=1)
             self.insert_slice_rows(slicer)
             pass
 
@@ -121,19 +142,11 @@ class Gui(object):
 
 
 
-    def insert_slice_rows(self, slice_no):  # slice_no = 1, 2, 3, ...
+    def insert_slice_rows(self, slicer):  # slice_no = 1, 2, 3, ...
         '''
         for each slice, insert it rows of ports, max flow entries and #flow entries, for each switch
         '''
-        label_slice = Label(self.tab2, text="Slice " + str(slice_no), bg="#0059b3", fg="white", padx=3, pady=3)
-        label_slice.config(font=('Arial', 12))
-        label_slice.grid(row=3 * (slice_no - 1) + 1, column=0, sticky="nsew", columnspan=1, rowspan=3, padx=1,
-                         pady=(1, 3))
-
-        label_ports = Label(self.tab2, text="ports", bg="white", fg="black", padx=3, pady=3)
-        label_ports.config(font=('Arial', 12))
-        label_ports.grid(row=3 * (slice_no - 1) + 1, column=1, sticky="nsew", columnspan=1, rowspan=1, padx=1,
-                         pady=1)
+        
 
         for col in range(2, 2 + self.n_switches):
             label_cell = Label(self.tab2, text= "", bg="white", fg="black", padx=3, pady=3)
@@ -144,36 +157,30 @@ class Gui(object):
                 text = ""
                 ports =  list(self.switches[col-2].ports.values())
                 for port in ports:
-                    if slice_no in port.list_of_slices:
+                    if slicer in port.list_of_slices:
                         text += str(port.port_no) + ", "
                     else:
                         pass
                 
             #port = self.switches
             label_cell.config(text = str(text))
-            label_cell.grid(row=1 + 3 * (slice_no - 1), column=col, sticky="nsew", columnspan=1, rowspan=1,
+            label_cell.grid(row=2 * (slicer - 1) + 1, column=col, sticky="nsew", columnspan=1, rowspan=1,
                             padx=1, pady=1)
 
-        label_maxflows = Label(self.tab2, text="max flow entries", bg="white", fg="black", padx=3, pady=3)
-        label_maxflows.config(font=('Arial', 12))
-        label_maxflows.grid(row=2 + 3 * (slice_no - 1), column=1, sticky="nsew", columnspan=1, rowspan=1,
-                            padx=1, pady=1)
+        
 
-        for i in range(2, 2 + self.n_switches):
-            label_cell = Label(self.tab2, text="", bg="white", fg="black", padx=3, pady=3)
-            label_cell.config(font=('Arial', 12))
-            label_cell.grid(row=2 + 3 * (slice_no - 1), column=i, sticky="nsew", columnspan=1, rowspan=1,
-                            padx=1, pady=1)
+        # for i in range(2, 2 + self.n_switches):
+        #     label_cell_max_flow = Label(self.tab2, text="", bg="white", fg="black", padx=3, pady=3)
+        #     label_cell_max_flow.config(font=('Arial', 12))
+        #     label_cell_max_flow.grid(row=2 + 3 * (slice_no - 1), column=i, sticky="nsew", columnspan=1, rowspan=1,
+        #                     padx=1, pady=1)
 
-        label_n_flows = Label(self.tab2, text="# flow entries", bg="white", fg="black", padx=3, pady=3)
-        label_n_flows.config(font=('Arial', 12))
-        label_n_flows.grid(row=3 + 3 * (slice_no - 1), column=1, sticky="nsew", columnspan=1, rowspan=1,
-                           padx=1, pady=(1, 3))
+        
 
-        for i in range(2, 2 + self.n_switches):
-            label_cell = Label(self.tab2, text="", bg="white", fg="black", padx=3, pady=3)
-            label_cell.config(font=('Arial', 12))
-            label_cell.grid(row=3 + 3 * (slice_no - 1), column=i, sticky="nsew", columnspan=1, rowspan=1,
+        # for i in range(2, 2 + self.n_switches):
+            label_cell_no_flow = Label(self.tab2, text="", bg="white", fg="black", padx=3, pady=3)
+            label_cell_no_flow.config(font=('Arial', 12))
+            label_cell_no_flow.grid(row=2 * (slicer - 1) + 2, column=col, sticky="nsew", columnspan=1, rowspan=1,
                             padx=1, pady=(1, 3))
 
 

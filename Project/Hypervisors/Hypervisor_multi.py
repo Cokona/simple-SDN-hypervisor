@@ -58,7 +58,8 @@ class TheServer:
         self.master = master
         self.queue = queue.Queue()
         self.number_of_controllers = number_of_controllers
-        self.flow_entry_max = 20
+        self.number_of_switches = number_of_switches
+        self.flow_entry_max = 100
         self.input_list = []
         self.switch_sockets = []
         self.controller_sockets = []
@@ -75,7 +76,7 @@ class TheServer:
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind((host, port))
         self.server.listen(200)     # !NOTE Reconsider 200
-        self.gui = Gui(self.master, self.queue,self.number_of_controllers,3,self.proxy_port_switch_dict.values())
+        self.gui = Gui(self.master, self.queue,self.number_of_controllers,self.number_of_switches,self.proxy_port_switch_dict.values())
         # gui.mainloop()
         self.periodicCall()
         
