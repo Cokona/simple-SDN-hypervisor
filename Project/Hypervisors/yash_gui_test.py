@@ -1,19 +1,19 @@
 from tkinter import *
 from tkinter.ttk import Notebook,Entry
-import Hypervisor_multi
+import queue
 
 class Gui(object):
-    def __init__(self, number_of_slices, number_of_switches, switches):
+    def __init__(self, master, queue, number_of_slices, number_of_switches, switches):
         #test value
         self.ports = "1,2,3"
 
-
+        self.queue = queue
 
         self.switches = switches #list of SWITCHes
         self.n_slices = number_of_slices
         self.n_switches = number_of_switches
 
-        self.window = Tk()
+        self.window = master
         self.window.title("SDN hypervisor API")
         self.window.geometry("600x400")
 
@@ -29,31 +29,41 @@ class Gui(object):
         self.create_tab_1()
         self.create_tab_2()
         self.create_tab_3()
-
-
-
-
-
+        
+    def processIncoming(self):
+        """
+        Handle all the messages currently in the queue (if any).
+        """
+        while self.queue.qsize():
+            try:
+                self.switches = self.queue.get(0)
+                # Check contents of message and do what it says
+                # As a test, we simply print it
+                
+                #self.update_refresh()
+            except queue.Empty:
+                pass
 
     def update(self):
         print("Called update")
         self.window.update()
+        #self.window.after(500, refresh)
 
-    def refresh(self):
+    def update_refresh(self):
         # print("update")
         #label1.configure(text='Balance :$' + str(max_amount))
         # self.window.update()
         #self.window.after(500, refresh)
 
-        for slice in range(1,self.n_slices+1):
-            self.insert_slice_rows(slice)
-            pass
+        for slicer in range(1,self.n_slices+1):
+            self.insert_slice_rows(slicer)
         pass
 
     def test_change_value(self):
         self.ports = "a,b,c"
         # print(self.ports)
         pass
+    
 
     def getValue(self):
         pass
@@ -62,7 +72,7 @@ class Gui(object):
         n_slices = self.number_of_slices
 
     def set_number_of_switches(self):
-        n_switches = slef.number_of_switches
+        n_switches = self.number_of_switches
 
 
     def create_tab_1(self):
@@ -95,8 +105,8 @@ class Gui(object):
 
         rows = 1 + 3 * self.n_slices
 
-        refresh_bt = Button(self.tab2, text = "refresh", state = 'normal', padx = 1,pady = 3, command=self.refresh, fg = 'black', bg='white')
-        refresh_bt.grid(row=rows+1, column=0, sticky="nsew", columnspan=1,rowspan=1, padx=1, pady=(1,3))
+        update_bt = Button(self.tab2, text = "update", state = 'normal', padx = 1,pady = 3, command=self.update, fg = 'black', bg='white')
+        update_bt.grid(row=rows+1, column=0, sticky="nsew", columnspan=1,rowspan=1, padx=1, pady=(1,3))
         self.tablayout.add(self.tab2,text="Switch Statistics")
 
         change_value_bt = Button(self.tab2, text="change values", state='normal', padx=1, pady=3, command=self.test_change_value, fg='black',
@@ -129,14 +139,14 @@ class Gui(object):
                 text = ""
             else:
                 text = []
-                ports =  self.switches[col-1].ports
+                ports =  list(self.switches[col-2].ports.values())
                 for port in ports:
                     if slice_no in port.list_of_slices:
-                        text.append(port_no)
+                        text.append(port.number)
                     else:
                         pass
                 
-            port = self.switches
+            #port = self.switches
             label_cell.config(text = str(text))
             label_cell.grid(row=1 + 3 * (slice_no - 1), column=col, sticky="nsew", columnspan=1, rowspan=1,
                             padx=1, pady=1)
@@ -189,16 +199,6 @@ class Gui(object):
         self.tablayout.pack(fill="both")
 
 
-gui = Gui(Hypervisor_multi.number_of_controllers,Hypervisor_multi.number_of_switches,[]) #server.proxy_port_switch_dict.values()
-flag = True
-def set_flag(flag): #set flag when on recv
-    if flag is True:
-        flag = False
-    else:
-        flag = True
-while flag:
-    gui.update()
-    set_flag(flag)
-
-
+# gui = Gui(2,3,0)
+# gui.mainloop()
 
