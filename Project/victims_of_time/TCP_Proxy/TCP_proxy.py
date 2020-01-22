@@ -23,6 +23,10 @@ def print_packet(binary_packet, source):
             #try:
         msg = unpack_message(binary_packet)
 <<<<<<< HEAD:Project/victims_of_time/TCP_Proxy/TCP_proxy.py
+<<<<<<< HEAD:Project/victims_of_time/TCP_Proxy/TCP_proxy.py
+=======
+        
+>>>>>>> 8c51f4c344bd4f4b795645bae34dcf5099e3cb68:Project/Hypervisors/TCP_proxy.py
 =======
         
 >>>>>>> 8c51f4c344bd4f4b795645bae34dcf5099e3cb68:Project/Hypervisors/TCP_proxy.py
