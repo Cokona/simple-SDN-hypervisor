@@ -39,8 +39,8 @@ class Gui(object):
                 self.switches = self.queue.get(0)
                 # Check contents of message and do what it says
                 # As a test, we simply print it
-                
-                self.update_refresh()
+                #print(self.switches)
+                #self.update_refresh()
             except queue.Empty:
                 pass
 
@@ -54,10 +54,12 @@ class Gui(object):
         #label1.configure(text='Balance :$' + str(max_amount))
         # self.window.update()
         #self.window.after(500, refresh)
-
+        print("Update Refresh Called")
         for slicer in range(1,self.n_slices+1):
             self.insert_slice_rows(slicer)
+        print("Slices Inserted")
         self.window.update()
+        print("Window Updated")
         pass
 
     def test_change_value(self):
@@ -106,7 +108,7 @@ class Gui(object):
 
         rows = 1 + 3 * self.n_slices
 
-        update_bt = Button(self.tab2, text = "update", state = 'normal', padx = 1,pady = 3, command=self.update, fg = 'black', bg='white')
+        update_bt = Button(self.tab2, text = "update", state = 'normal', padx = 1,pady = 3, command=self.update_refresh, fg = 'black', bg='white')
         update_bt.grid(row=rows+1, column=0, sticky="nsew", columnspan=1,rowspan=1, padx=1, pady=(1,3))
         self.tablayout.add(self.tab2,text="Switch Statistics")
 
@@ -139,11 +141,11 @@ class Gui(object):
             if len(self.switches) < col -1:
                 text = ""
             else:
-                text = []
+                text = ""
                 ports =  list(self.switches[col-2].ports.values())
                 for port in ports:
                     if slice_no in port.list_of_slices:
-                        text.append(port.number)
+                        text += ", " + str(port.port_no)
                     else:
                         pass
                 

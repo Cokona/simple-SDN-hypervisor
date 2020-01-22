@@ -83,8 +83,9 @@ class TheServer:
         """
         Check every 100 ms if there is something new in the queue.
         """
+        self.queue.put(list(self.proxy_port_switch_dict.values()))
         self.gui.processIncoming()
-        self.master.after(100, self.periodicCall)
+        self.master.after(5000, self.periodicCall)
 
     def main_loop(self):
         self.input_list.append(self.server)
@@ -208,7 +209,7 @@ class TheServer:
                     else:
                         print("Access Denied: from CONTR{} to port{} of Switch{} of type:{}".format(
                                 str(controller_id), str(packet_info.out_port), str(self.temp_switch.number), str(packet_info.of_type)))
-        self.queue.put(list(self.proxy_port_switch_dict.values()))
+        
 
     def check_for_permission(self, packet_info, controller_id):
         '''
