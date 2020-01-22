@@ -29,12 +29,12 @@ class Slice(object):
 class Switch(object):
 
     def __init__(self,forwarder):
-        # Swıtch number assıgned when ınıtıated ın the proxy_port_to_swıtch dıct ın maın 
+        # Switch number assigned when initiated in the proxy_port_to_switch dict in main 
         self.number = len(forwarder.proxy_port_switch_dict)+1
         self.dpid = None
-        # thıs ıs added when we have a arp message - check hyper parser packet ın
+        # this is added when we have a arp message - check hyper parser packet in
         self.ports = {}
-        # for checkıng duplıcate common messages
+        # for checking duplicate common messages
         self.common_message_flag = {Type.OFPT_HELLO:False,
                                     Type.OFPT_ERROR:False,
                                     Type.OFPT_FEATURES_REQUEST:False,
@@ -45,37 +45,57 @@ class Switch(object):
                                     Type.OFPT_FEATURES_REPLY:Type.OFPT_FEATURES_REQUEST,
                                     Type.OFPT_MULTIPART_REPLY:Type.OFPT_MULTIPART_REQUEST,
                                     Type.OFPT_ECHO_REQUEST:Type.OFPT_ECHO_REPLY}
-        # has a lıst of actıve buffer ıds
+        # has a list of active buffer ids
         self.buffer_flags = []
 
 
         self.flow_entry_max = 20
-        self.flow_entry_counter = {}
+        # self.flow_entry_counter = {}
+        self.flow_match_entries = {}
         for i in range(1,forwarder.number_of_controllers+1):
-            self.flow_entry_counter[i] = 0
+            self.flow_match_entries[i] = []
 
-    def flow_add(self, slice_no):
-        if self.flow_entry_counter[slice_no] < self.flow_entry_max:
-            self.flow_entry_counter[slice_no] += 1
-            print('Switch:{}, No of flows: {} for slice {}'.format(str(self.number), str(self.flow_entry_counter[slice_no]),str(slice_no)))
+    def flow_add(self, packet_info,controller_id):
+        no_of_flow_entries = len(self.flow_match_entries[controller_id])
+        if no_of_flow_entries < self.flow_entry_max:
+            if packet_info.match_field in self.flow_match_entries[controller_id]:
+                print("A flowmod with the same exact match fields is being added ????????? CHECK IT OUT")
+            self.flow_match_entries[controller_id].append(packet_info.match_field)
+            no_of_flow_entries = len(self.flow_match_entries[controller_id])
+            print('Switch:{}, No of flows: {} for slice {}'.format(str(self.number), str(no_of_flow_entries), str(controller_id)))
+
         else:
             print("Raise flag for max entires")
             pass
 
-    def flow_remove(self,slice_no):
-        if self.flow_entry_counter[slice_no] > 0:
-            self.flow_entry_counter[slice_no] -= 1
-            print("Flow Removed for switch {} from slice {}".format(str(self.number), str(slice_no)))
-            print("New number of flows are {} ".format(str(self.flow_entry_counter[slice_no])))
+    def flow_remove(self,packet_info):
+        for slice_no_from_enries in range(1,len(self.flow_match_entries)+1):
+            if packet_info.match_field in self.flow_match_entries[slice_no_from_enries]:
+                break
+            elif slice_no_from_enries is len(self.flow_match_entries):
+                print('There is a problem with the flow remove logic - Trying to find the slice')
+
+        no_of_flow_entries = len(self.flow_match_entries[slice_no_from_enries])
+
+        if no_of_flow_entries > 0:
+            if packet_info.match_field in self.flow_match_entries[slice_no_from_enries]:
+                self.flow_match_entries[slice_no_from_enries].remove(packet_info.match_field)
+                print("Flow Removed for switch {} from slice {}".format(str(self.number), str(slice_no_from_enries)))
+                print("New number of flows are {} ".format(str(len(self.flow_match_entries[slice_no_from_enries]))))
+            else:
+                ##cannot remove from the switch's flow table
+                #send error msg back
+                print("SIGNIFICANT ERROR, SWITCH{} is trying to remove flow from slice{} that doesn't match the one in its entries!!!".format(
+                    str(self.number),str(slice_no_from_enries)))
+                pass
         else:
-            ##cannot remove from the switch's flow table
-            #send error msg back
+            print("Flow_remove DOES NOT HAVE any entries to remove")
             pass
 
 class Port(object):
 
     def __init__(self, packet):
-        # thıs object ıs ın the swıtches dıctıonary 
+        # this object is in the switches dictionary 
         self.port_no = packet.in_port
         self.connected_mac = packet.mac_src
         self.list_of_slices = [packet.slice_no]
