@@ -104,12 +104,19 @@ class Switch(object):
 
 class Port(object):
 
-    def __init__(self, packet):
+    def __init__(self, multi_port):
         # this object is in the switches dictionary 
-        self.port_no = packet.in_port
-        self.connected_mac = packet.mac_src
-        self.list_of_slices = [packet.slice_no]
-        self.connected_ip = packet.ip_src
+        # self.port_no = packet.in_port
+        # self.connected_mac = packet.mac_src
+        # self.list_of_slices = [packet.slice_no]
+        # self.connected_ip = packet.ip_src
+        self.port_no = int(str(multi_port.port_no))
+        self.name = str(multi_port.name)
+        self.hw_addr = str(multi_port.hw_addr)
+        self.connected_mac = None
+        self.list_of_slices = []
+        self.connected_ip = None
+
 
 
         # shıt reserved for mac fılterıng
