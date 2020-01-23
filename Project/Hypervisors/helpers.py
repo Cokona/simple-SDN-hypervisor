@@ -55,6 +55,9 @@ class Switch(object):
         for i in range(1,forwarder.number_of_controllers+1):
             self.flow_match_entries[i] = []
             self.no_of_flow_entries[i] = 0
+        
+        self.n_buffers = 0 #max packets buffered at once
+        self.n_tables = 0 #number of tables supported by the datapath
 
     def flow_add(self, packet_info, controller_id):
         if self.no_of_flow_entries[controller_id] < self.flow_entry_max:
