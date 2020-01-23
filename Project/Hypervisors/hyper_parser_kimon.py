@@ -68,31 +68,32 @@ class Packet_switch(object):
         pass
     def type_multipart_reply(self):
         '''
-       
-        # header', 'multipart_type'(int), 'flags'(int), 'pad', 'body'(pyof.v0x04.common.port.Port )        
-        
-        '''
         print("*******multipart_reply*********")
-        if str(self.msg.multipart_type) == 'MultipartType.OFPMP_PORT_DESC':
-            print("*******ports description*********")
-            #'body'(pyof.v0x04.common.port.Port )        
-            # ports = []
-            # for port in self.msg.body:
-            #     print("port n: hw_addr ",port.port_no,port.hw_addr)
-            #     #name, config, state, curr, advertised, supported, peer, curr_speed, max_speed
-            #     ports.append(port)
-
-            '''
-            port_no
-            hw_addr
-            name: char
-            config: (class PortConfig) flag to describe the current configuration (set by controller)
-                    OFPPC_PORT_DOWN, OFPPC_NO_RECV, OFPPC_NO_FWD, OFPPC_NO_PACKET_IN
-            state: (class PortSate) flag to indicate the current state of the physical port (not set by the controller)
-                    OFPPS_LINK_DOWN(no physical link present), OFPPS_BLOCKED, OFPPS_LIVE 
-            '''
-
-        
+        # header', 'multipart_type'(int), 'flags'(int), 'pad', 'body'(pyof.v0x04.common.port.Port )
+        #print(str(self.msg.header))
+        ports = []
+        for port in self.msg.body:
+            print("port n: hw_addr ",port.port_no,port.hw_addr)
+            #name, config, state, curr, advertised, supported, peer, curr_speed, max_speed
+            ports.append(port)
+        '''
+       
+        for port in self.msg.body:
+            if int(str(port.port_no)) == GENERIC_PORT:
+                self.temp_switch.number = int(str(port.name)[1])
+                self.networkgraph.add_node(str(self.temp_switch.number))
+            else:
+                self.temp_switch.ports[int(str(port.port_no))] = Port(port)
+            
+                # print(self.temp_switch.number)
+            # print("Port NO: " + str(port.port_no) + " , HW ADDR: " + str(port.hw_addr))
+            # print(type(port.port_no)) 
+        # print("Switch : " + str(self.temp_switch.number))
+        print("Switch : " + str(self.temp_switch.number))
+        for port in list(self.temp_switch.ports.values()):
+            print('Port No: ' + str(port.port_no))
+            print('Name : ' + str(port.name))
+            print('HW addr: ' + str(port.hw_addr))
         pass
 
 
@@ -209,14 +210,11 @@ class Packet_switch(object):
         #'header', 'datapath_id', 'n_buffers', 'n_tables', 'auxiliary_id', 'pad', 'capabilities', 'reserved'
         self.dpid = self.msg.datapath_id._value
         self.temp_switch.dpid = str(self.dpid)[-1]
-        self.temp_switch.n_buffers=int(str(self.msg.n_buffers))
-        self.temp_switch.n_tables=int(str(self.msg.n_tables))
-
         #self.print_result = True
         pass
 
     def type_port_status(self):
-        print("*****port_status*****")
+        #print("*****port_status*****")
         '''
         reason = self.msg.reason
         port_no = int(str(self.msg.desc.port_no))
@@ -381,9 +379,4 @@ class Packet_controller(object):
         print("IP Source : " + str(self.ip_src))
         print("IP Dest : " + str(self.ip_dst) )
         print("Slice : " + str(self.slice_no) )
-        
-
-       
-
-        
         
