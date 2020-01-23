@@ -16,14 +16,13 @@ from yash_gui_test import Gui
 import threading
 import networkx as nx
 import matplotlib.pyplot as plt
-import pygraphviz as pgv
 from networkx.drawing.nx_agraph import graphviz_layout, to_agraph
 
 
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
 # But when buffer get to high or delay go too down, you can broke things
 buffer_size = 1024
-delay = 0.0001
+delay = 0.00002
 
 
 number_of_controllers = int(sys.argv[1])
@@ -64,7 +63,7 @@ class TheServer:
         self.queue = queue.Queue()
         self.number_of_controllers = number_of_controllers
         self.number_of_switches = number_of_switches
-        self.flow_entry_max = 20
+        self.flow_entry_max = 100
         self.input_list = []
         self.switch_sockets = []
         self.controller_sockets = []
@@ -189,7 +188,7 @@ class TheServer:
     def on_recv(self):
         data = self.data
         if not self.graphcall_flag:
-            self.master.after(20000, self.graphCall)
+            self.master.after(15000, self.graphCall)
             self.graphcall_flag = True
         # here we can parse and/or modify the data before send forward
         if self.s in self.switch_sockets:

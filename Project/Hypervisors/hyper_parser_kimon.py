@@ -133,7 +133,7 @@ class Packet_switch(object):
                 if self.mac_src not in self.mac_addrlist:
                     self.mac_addrlist.append(self.mac_src)
                     if '00:00' in self.mac_src:
-                        host_name = "h" +str(self.mac_src[-1])
+                        host_name = "h" +str(self.mac_src[-2:])
                         self.networkgraph.add_node(host_name)  
                         self.networkgraph.add_edge(str(self.temp_switch.number),host_name)
                     else:
@@ -210,6 +210,9 @@ class Packet_switch(object):
         #'header', 'datapath_id', 'n_buffers', 'n_tables', 'auxiliary_id', 'pad', 'capabilities', 'reserved'
         self.dpid = self.msg.datapath_id._value
         self.temp_switch.dpid = str(self.dpid)[-1]
+        self.temp_switch.n_buffers=int(str(self.msg.n_buffers))
+        self.temp_switch.n_tables=int(str(self.msg.n_tables))
+
         #self.print_result = True
         pass
 
