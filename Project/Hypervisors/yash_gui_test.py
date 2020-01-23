@@ -1,14 +1,20 @@
 from tkinter import *
 from tkinter.ttk import Notebook,Entry
 import queue
+import networkx as nx
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.backend_bases import key_press_handler
+from matplotlib.figure import Figure
 
 class Gui(object):
-    def __init__(self, master, queue, number_of_slices, number_of_switches, switches, flow_entry_max):
+    def __init__(self, master, queue, graphqueue, number_of_slices, number_of_switches, switches, flow_entry_max):
         #test value
         #self.ports = "1,2,3"
 
         self.queue = queue
-
+        self.graphqueue = graphqueue
+        self.graphtopo = None
         self.switches = switches #list of SWITCHes
         self.n_slices = number_of_slices
         self.n_switches = number_of_switches
@@ -45,6 +51,33 @@ class Gui(object):
                 self.update_refresh()
             except queue.Empty:
                 pass
+
+    def processTopology(self):
+        """
+        Hande all the message in the topology queue
+        """
+        while self.graphqueue.qsize():
+            try:
+                self.graphtopo = self.graphqueue.get(0)
+                self.update_graph()
+                print(self.graphtopo.nodes)
+                print(self.graphtopo.edges)
+            except queue.Empty:
+                pass
+
+
+    def update_graph(self):
+        f = plt.figure(figsize=(5,5),dpi=100)
+        # f.add_subplot(122)
+        nx.draw(self.graphtopo, with_labels=True)
+        canvas = FigureCanvasTkAgg(f,master=self.tab1)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=TOP,fill=BOTH,expand=1)
+        
+        self.window.update()
+
+        pass
+
 
     def update(self):
         #print("Called update")
@@ -85,6 +118,8 @@ class Gui(object):
 
         self.tab1.pack(fill="both")
         self.tablayout.add(self.tab1, text="Network Topology")
+
+
 
     def create_tab_2(self):
         # tab2
