@@ -10,12 +10,16 @@ from helpers import Port
 import pyof
 
 FLOOD_PORT = 4294967291
+GENERIC_PORT = 4294967294
 
 
 class Packet_switch(object):
     
     def __init__(self, msg, forwarder):
         self.mac_addrlist = forwarder.mac_add
+        self.conn_tuples = forwarder.conn_tuples
+        self.switch_list = forwarder.proxy_port_switch_dict.values()
+        self.networkgraph = forwarder.networkgraph
         self.temp_switch = forwarder.proxy_port_switch_dict[forwarder.s.getpeername()[1]]
         self.source_no = self.temp_switch.number
         self.print_result = False
@@ -64,16 +68,34 @@ class Packet_switch(object):
         pass
     def type_multipart_reply(self):
         '''
-        print("*******multipart_reply*********")
-        # header', 'multipart_type'(int), 'flags'(int), 'pad', 'body'(pyof.v0x04.common.port.Port )
-        #print(str(self.msg.header))
-        ports = []
-        for port in self.msg.body:
-            print("port n: hw_addr ",port.port_no,port.hw_addr)
-            #name, config, state, curr, advertised, supported, peer, curr_speed, max_speed
-            ports.append(port)
+       
+        # header', 'multipart_type'(int), 'flags'(int), 'pad', 'body'(pyof.v0x04.common.port.Port )        
+        
         '''
+        print("*******multipart_reply*********")
+        if str(self.msg.multipart_type) == 'MultipartType.OFPMP_PORT_DESC':
+            print("*******ports description*********")
+            #'body'(pyof.v0x04.common.port.Port )        
+            # ports = []
+            # for port in self.msg.body:
+            #     print("port n: hw_addr ",port.port_no,port.hw_addr)
+            #     #name, config, state, curr, advertised, supported, peer, curr_speed, max_speed
+            #     ports.append(port)
+
+            '''
+            port_no
+            hw_addr
+            name: char
+            config: (class PortConfig) flag to describe the current configuration (set by controller)
+                    OFPPC_PORT_DOWN, OFPPC_NO_RECV, OFPPC_NO_FWD, OFPPC_NO_PACKET_IN
+            state: (class PortSate) flag to indicate the current state of the physical port (not set by the controller)
+                    OFPPS_LINK_DOWN(no physical link present), OFPPS_BLOCKED, OFPPS_LIVE 
+            '''
+
+        
         pass
+
+
     def type_hello(self):
         #print("*******hello*********")
         self.version = int(str(self.msg.header.version))
@@ -105,9 +127,23 @@ class Packet_switch(object):
                 self.mac_dst = eth.dst_s
                 self.ip_dst = eth[ip6.IP6].dst_s
                 self.ip_src = eth[ip6.IP6].src_s
+                self.mac_src = self.mac_src.lower()
+                self.mac_dst = self.mac_dst.lower()
                 if self.mac_src not in self.mac_addrlist:
                     self.mac_addrlist.append(self.mac_src)
+                    if '00:00' in self.mac_src:
+                        host_name = "h" +str(self.mac_src[-1])
+                        self.networkgraph.add_node(host_name)  
+                        self.networkgraph.add_edge(str(self.temp_switch.number),host_name)
+                    else:
+                        for switcher in self.switch_list:
+                            for porter in list(switcher.ports.values()):
+                                if self.mac_src == porter.hw_addr:
+                                    self.networkgraph.add_edge(str(self.temp_switch.number),str(switcher.number))
+                                    break
                 pass
+                
+                
             elif self.eth_type == 'ETH_TYPE_ARP':
                 # print("ARP with attr: {}".format(str(eth.__dict__.keys())))
                 self.mac_src = eth.src_s
@@ -116,10 +152,16 @@ class Packet_switch(object):
                 self.ip_src = eth[arp.ARP].spa_s
                 self.slice_no = int(self.ip_src[0])
                 self.print_result = False
+                self.mac_src = self.mac_src.lower()
+                self.mac_dst = self.mac_dst.lower()
 
                 ## COOLER IMPLEMENTATION LATER
-                if self.in_port not in self.temp_switch.ports.keys():
-                    self.temp_switch.ports[self.in_port] = Port(self)
+                # if self.in_port not in self.temp_switch.ports.keys():
+                #     self.temp_switch.ports[self.in_port] = Port(self)
+                if not self.temp_switch.ports[self.in_port].connected_mac:
+                    self.temp_switch.ports[self.in_port].connected_mac = self.mac_src
+                if not self.temp_switch.ports[self.in_port].connected_ip:
+                    self.temp_switch.ports[self.in_port].connected_mac = self.ip_src
                 if self.slice_no not in self.temp_switch.ports[self.in_port].list_of_slices:
                     self.temp_switch.ports[self.in_port].list_of_slices.append(self.slice_no)
                 #print("SWITCH{}'s PORT{}'s SLICE LIST: {}".format(str(self.temp_switch.number),str(self.in_port),str(self.temp_switch.ports[self.in_port].list_of_slices)))
@@ -167,11 +209,14 @@ class Packet_switch(object):
         #'header', 'datapath_id', 'n_buffers', 'n_tables', 'auxiliary_id', 'pad', 'capabilities', 'reserved'
         self.dpid = self.msg.datapath_id._value
         self.temp_switch.dpid = str(self.dpid)[-1]
+        self.temp_switch.n_buffers=int(str(self.msg.n_buffers))
+        self.temp_switch.n_tables=int(str(self.msg.n_tables))
+
         #self.print_result = True
         pass
 
     def type_port_status(self):
-        #print("*****port_status*****")
+        print("*****port_status*****")
         '''
         reason = self.msg.reason
         port_no = int(str(self.msg.desc.port_no))

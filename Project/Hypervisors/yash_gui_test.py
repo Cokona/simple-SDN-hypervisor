@@ -1,17 +1,25 @@
 from tkinter import *
 from tkinter.ttk import Notebook,Entry
 import queue
+import networkx as nx
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.backend_bases import key_press_handler
+from matplotlib.figure import Figure
 
 class Gui(object):
-    def __init__(self, master, queue, number_of_slices, number_of_switches, switches):
+    def __init__(self, master, queue, graphqueue, number_of_slices, number_of_switches, switches, flow_entry_max):
         #test value
-        self.ports = "1,2,3"
+        #self.ports = "1,2,3"
 
         self.queue = queue
-
+        self.graphqueue = graphqueue
+        self.graphtopo = None
         self.switches = switches #list of SWITCHes
         self.n_slices = number_of_slices
         self.n_switches = number_of_switches
+        self.flow_entry_max = flow_entry_max
+    
 
         self.window = master
         self.window.title("SDN hypervisor API")
@@ -43,6 +51,33 @@ class Gui(object):
                 self.update_refresh()
             except queue.Empty:
                 pass
+
+    def processTopology(self):
+        """
+        Hande all the message in the topology queue
+        """
+        while self.graphqueue.qsize():
+            try:
+                self.graphtopo = self.graphqueue.get(0)
+                self.update_graph()
+                print(self.graphtopo.nodes)
+                print(self.graphtopo.edges)
+            except queue.Empty:
+                pass
+
+
+    def update_graph(self):
+        f = plt.figure(figsize=(5,5),dpi=100)
+        # f.add_subplot(122)
+        nx.draw(self.graphtopo, with_labels=True)
+        canvas = FigureCanvasTkAgg(f,master=self.tab1)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=TOP,fill=BOTH,expand=1)
+        
+        self.window.update()
+
+        pass
+
 
     def update(self):
         #print("Called update")
@@ -83,6 +118,8 @@ class Gui(object):
 
         self.tab1.pack(fill="both")
         self.tablayout.add(self.tab1, text="Network Topology")
+
+
 
     def create_tab_2(self):
         # tab2
@@ -131,7 +168,7 @@ class Gui(object):
 
         update_bt = Button(self.tab2, text = "update", state = 'normal', padx = 1,pady = 3, command=self.update_refresh, fg = 'black', bg='white')
         update_bt.grid(row=rows+1, column=0, sticky="nsew", columnspan=1,rowspan=1, padx=1, pady=(1,3))
-        self.tablayout.add(self.tab2,text="Switch Statistics")
+        self.tablayout.add(self.tab2,text="Slice informantion")
 
         
 
@@ -158,26 +195,32 @@ class Gui(object):
                 
             else:
                 text_port = ""
-                text_flow = str(self.switches[col-2].no_of_flow_entries[slicer])
+                text_flow = self.switches[col-2].no_of_flow_entries[slicer]
                 ports =  list(self.switches[col-2].ports.values())
                 for port in ports:
                     #getting ports for the slice
                     if slicer in port.list_of_slices:
-                        text_port += str(port.port_no) + ", "
+                        if text_port != "":
+                            text_port += str(",")
+                        text_port += str(port.port_no)
                     else:
                         pass
             
 
                 
-            #port = self.switches
+            
             label_cell_port.config(text = str(text_port))
             label_cell_port.grid(row=2 * (slicer - 1) + 1, column=col, sticky="nsew", columnspan=1, rowspan=1,
                             padx=1, pady=1)
+
             label_cell_no_flow.config(text = str(text_flow))
+            
+
+            if text_flow == self.flow_entry_max:
+                label_cell_no_flow.config(fg = "red")
+
             label_cell_no_flow.grid(row=2 * (slicer - 1) + 2, column=col, sticky="nsew", columnspan=1, rowspan=1,
                             padx=1, pady=(1, 3))
-
-        
             
 
             
@@ -203,7 +246,7 @@ class Gui(object):
                     label.grid(row=row,column=column,sticky="nsew",padx=1,pady=1)
                     self.tab3.grid_columnconfigure(column,weight=1)
 
-        self.tablayout.add(self.tab3,text="Slice Information")
+        self.tablayout.add(self.tab3,text="Switch Statistics")
 
         self.tablayout.pack(fill="both")
 

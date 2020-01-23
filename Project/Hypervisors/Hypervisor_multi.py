@@ -14,11 +14,16 @@ import queue
 from tkinter import *
 from yash_gui_test import Gui
 import threading
+import networkx as nx
+import matplotlib.pyplot as plt
+import pygraphviz as pgv
+from networkx.drawing.nx_agraph import graphviz_layout, to_agraph
+
 
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
 # But when buffer get to high or delay go too down, you can broke things
 buffer_size = 1024
-delay = 0.0002
+delay = 0.0001
 
 
 number_of_controllers = int(sys.argv[1])
@@ -59,7 +64,7 @@ class TheServer:
         self.queue = queue.Queue()
         self.number_of_controllers = number_of_controllers
         self.number_of_switches = number_of_switches
-        self.flow_entry_max = 100
+        self.flow_entry_max = 20
         self.input_list = []
         self.switch_sockets = []
         self.controller_sockets = []
@@ -69,26 +74,58 @@ class TheServer:
             self.controller_sockets.append([])
         self.proxy_port_switch_dict = {}
         self.mac_add = []
+        self.conn_tuples = []
         self.temp_switch = None
+        self.networkgraph = nx.DiGraph()
+        self.graphqueue = queue.Queue()
+        self.graphcall_flag = False
         
         # Here we create the server instance and bind it to port 
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind((host, port))
         self.server.listen(200)     # !NOTE Reconsider 200
-        self.gui = Gui(self.master, self.queue,self.number_of_controllers,self.number_of_switches,self.proxy_port_switch_dict.values())
-        # gui.mainloop()
+        self.gui = Gui(self.master, self.queue,self.graphqueue,self.number_of_controllers,self.number_of_switches,self.proxy_port_switch_dict.values(),self.flow_entry_max)
         self.periodicCall()
+        # time.sleep(2000)
+        # self.graphCall()
         
     def periodicCall(self):
         """
-        Check every 100 ms if there is something new in the queue.
+        Check every 5 s if there is something new in the queue.
         """
+        # # # # A = to_agraph(self.networkgraph)
+        # # # # A.layout('dot')
+        # # # # A.draw('abcd.png')
+        
+        #plt.show()
+        # print(self.networkgraph.nodes)
+        # print(self.networkgraph.edges)
         switch_list = list(self.proxy_port_switch_dict.values())
         switch_list.sort(key=lambda x : int(x.dpid), reverse=False)
         self.queue.put(switch_list)
         self.gui.processIncoming()
         self.master.after(5000, self.periodicCall)
+
+    def graphCall(self):
+        """
+        Check every 20 s if there is something new in the graphqueue.
+        """
+
+        self.graphqueue.put(self.networkgraph)
+        self.gui.processTopology()
+
+        #nx.draw_networkx(self.networkgraph,with_labels=True)
+        #plt.draw()
+        #plt.savefig('TopoC',dpi=100)
+        # # print(self.networkgraph.nodes)
+        # # print(self.networkgraph.edges)
+        # print("Graph Called")
+        # self.graphqueue.put(self.networkgraph)
+        # self.gui.processTopology()
+        # self.master.after(20000, self.graphCall)
+        # print("Out of graphh CALL")
+
 
     def main_loop(self):
         self.input_list.append(self.server)
@@ -151,6 +188,9 @@ class TheServer:
 
     def on_recv(self):
         data = self.data
+        if not self.graphcall_flag:
+            self.master.after(20000, self.graphCall)
+            self.graphcall_flag = True
         # here we can parse and/or modify the data before send forward
         if self.s in self.switch_sockets:
             self.temp_switch = self.proxy_port_switch_dict[self.s.getpeername()[1]]
@@ -169,14 +209,15 @@ class TheServer:
                         self.channels[check_for_flow_remove_flag[1]-1][self.s].send(data)
 
                 else:
-                    for i in range(self.number_of_controllers):
-                        self.channels[i][self.s].send(data)
-                    # print('Src:  SWITCH{},  Dst:  CONTROLLERs,  Packet_type: {}'.format(
-                    #                                                     str(self.temp_switch.number),str(packet_info.of_type)))
-                    try:
-                        self.temp_switch.common_message_flag[self.temp_switch.reset_message_flag[packet_info.of_type]] = False
-                    except:
-                        pass
+                    if packet_info.eth_type != 'ETH_TYPE_IP6':
+                        for i in range(self.number_of_controllers):
+                            self.channels[i][self.s].send(data)
+                        # print('Src:  SWITCH{},  Dst:  CONTROLLERs,  Packet_type: {}'.format(
+                        #                                                     str(self.temp_switch.number),str(packet_info.of_type)))
+                        try:
+                            self.temp_switch.common_message_flag[self.temp_switch.reset_message_flag[packet_info.of_type]] = False
+                        except:
+                            pass
         else:
             for i in range(self.number_of_controllers):
                 if self.s in self.controller_sockets[i]:
@@ -271,9 +312,9 @@ if __name__ == '__main__':
     root = Tk()
     server = TheServer(hypervisor_address[0],hypervisor_address[1],root)
     sys.excepthook = show_exception_and_exit
-    thread1 = threading.Thread(target=server.main_loop)      
+    thread_server = threading.Thread(target=server.main_loop)      
     try:
-        thread1.start()
+        thread_server.start()
         root.mainloop()
     except KeyboardInterrupt:
         print("Ctrl C - Stopping server")
