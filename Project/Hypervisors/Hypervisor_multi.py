@@ -1,6 +1,3 @@
-#!/usr/bin/python
-# This is a simple port-forward / proxy, written using only the default python
-
 import socket
 import select
 import time
