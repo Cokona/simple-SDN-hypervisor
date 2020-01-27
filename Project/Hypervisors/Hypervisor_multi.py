@@ -200,9 +200,11 @@ class TheServer:
                 #                                                     str(self.temp_switch.number),str(slice_no),str(packet_info.of_type)))
             else:
                 if packet_info.of_type is Type.OFPT_FLOW_REMOVED:    # special case of Flow-Removed
-                    check_for_flow_remove_flag = self.update_counters(self, packet_info)
-                    if check_for_flow_remove_flag[0]:
-                        self.channels[check_for_flow_remove_flag[1]-1][self.s].send(data)
+                    for packet_temp in packet_info.multiple_message_list:
+                        packet_temp_slice = packet_temp.cookie
+                        self.update_counters(packet_info, int(str(packet_temp.cookie)))
+                        data = packet_temp.pack()
+                        self.channels[packet_temp_slice-1][self.s].send(data)
 
                 else:
                     if packet_info.eth_type != 'ETH_TYPE_IP6':
@@ -233,7 +235,9 @@ class TheServer:
                         flag_to_drop_buf_id = self.check_for_duplicate_buf_id(packet_info)
                         if flag_to_drop_common is None:
                             if not flag_to_drop_buf_id:
-                                if self.update_counters(packet_info,controller_id=controller_id):
+                                if self.update_counters(packet_info, controller_id):
+                                    if packet_info.of_type is Type.OFPT_FLOW_MOD:               # Special case flow mod
+                                        data = packet_info.data     
                                     self.channels[i][self.s].send(data)
                                     # print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
                                     #         str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
@@ -291,9 +295,9 @@ class TheServer:
 
     def update_counters(self, packet_info,controller_id=None):
         if packet_info.of_type is Type.OFPT_FLOW_MOD:
-            return self.temp_switch.flow_add(packet_info,controller_id)
+            return self.temp_switch.flow_add(packet_info, controller_id)
         elif packet_info.of_type is Type.OFPT_FLOW_REMOVED:
-            return self.temp_switch.flow_remove(packet_info)
+            self.temp_switch.flow_remove(packet_info, controller_id)
         else:
             return True
 

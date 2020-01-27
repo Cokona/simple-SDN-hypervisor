@@ -23,7 +23,6 @@ class Packet_switch(object):
         self.temp_switch = forwarder.proxy_port_switch_dict[forwarder.s.getpeername()[1]]
         self.source_no = self.temp_switch.number
         self.print_result = False
-        self.match_field = None
         self.mac_src = None
         self.mac_dst = None
         self.ip_src = None
@@ -36,6 +35,8 @@ class Packet_switch(object):
         self.dpid = None
         self.buffer_id = None
         self.version = None #int
+        self.data = msg
+        self.multiple_message_list = []
         self.type_to_function = {Type.OFPT_HELLO:self.type_hello, 
                                 Type.OFPT_ERROR:self.type_error,
                                 Type.OFPT_PACKET_IN:self.type_packetin, 
@@ -46,6 +47,7 @@ class Packet_switch(object):
                                 Type.OFPT_MULTIPART_REPLY:self.type_multipart_reply,
                                 Type.OFPT_FLOW_REMOVED:self.type_flow_removed}
         try:
+            self.raw_msg = msg
             self.msg = unpack_message(msg)
         except Exception as e:
             print('EXCEPTION from Switch in Unpack_meesage: ' + str(e))
@@ -57,10 +59,17 @@ class Packet_switch(object):
         if self.print_result:
             self.print_the_packet_result()
     
-    
+    #######################################################################
     def type_flow_removed(self):
-        self.match_field = self.msg.match
-        print('FLOW REMOVED MESSAGE')
+        temp_message = self.msg
+        while len(self.data) > 0:
+            self.multiple_message_list.append(temp_message)
+            msg_length = int(str(temp_message.header.length))
+            self.data = self.data[msg_length:]
+            if len(self.data) == 0:
+                break
+            temp_message = unpack_message(self.data)
+
         pass
     def type_echo_reply(self):
         pass
@@ -277,6 +286,8 @@ class Packet_controller(object):
         self.out_port = None   #int
         self.slice_no = None
         self.version = None    #int 
+        self.data = None
+
         self.type_to_function = {Type.OFPT_HELLO:self.type_hello, 
                                 Type.OFPT_ERROR:self.type_error,
                                 Type.OFPT_PACKET_OUT:self.type_packetout,
@@ -288,6 +299,7 @@ class Packet_controller(object):
                                 Type.OFPT_FLOW_MOD:self.type_flow_mod}
         try:
             self.msg = unpack_message(msg)
+            self.raw_msg = msg
             self.parse_message()
         except Exception as e:
             print("EXCEPTION from Controller" + str(e))
@@ -296,14 +308,19 @@ class Packet_controller(object):
          
     def type_features_request(self):
         pass
+    
     def type_port_status(self):
         pass
+    
     def type_echo_reply(self):
         pass
+    
     def type_echo_request(self):
         pass
+    
     def type_multipart_request(self):
         pass
+
     def type_flow_mod(self):
         # print("*************flow mod**************")
         # msg:  'header', 'cookie', 'cookie_mask', 'table_id', 'command', 'idle_timeout', 
@@ -314,6 +331,15 @@ class Packet_controller(object):
         # instructions[0]: 'instruction_type', 'length', 'pad', 'actions
         instruction_len = len(self.msg.instructions)
         self.match_field = self.msg.match
+        self.msg.cookie = self.source_no
+        self.data = self.msg.pack()
+        # print(f'FLOW MOD MESSAGE with a \
+        #       \n msg : {self.msg} \
+        #       \n match field: {self.match_field.__dict__.keys()} \
+        #       \n Match Type: {self.match_field.match_type} \
+        #       \n oxm_match_fields: {self.match_field.oxm_match_fields} \
+        #       \n {self.match_field.oxm_match_fields[0]} \
+        #       \n length: {len(self.raw_msg)}')
         
         if instruction_len == 1:
             action_len = len(self.msg.instructions[0].actions)
