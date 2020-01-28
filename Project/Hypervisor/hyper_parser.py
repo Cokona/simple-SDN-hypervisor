@@ -5,7 +5,7 @@ import struct
 from pyof.foundation.base import GenericType
 from pypacker.layer12 import arp,lldp,ethernet
 from pypacker.layer3 import ip, ip6, ipx
-from helpers import Port
+from hyperobjects import Port
 
 import pyof
 
@@ -59,7 +59,6 @@ class Packet_switch(object):
         if self.print_result:
             self.print_the_packet_result()
     
-    #######################################################################
     def type_flow_removed(self):
         temp_message = self.msg
         while len(self.data) > 0:
@@ -93,11 +92,7 @@ class Packet_switch(object):
                 self.networkgraph.add_node(str(self.temp_switch.number))
             else:
                 self.temp_switch.ports[int(str(port.port_no))] = Port(port)
-            
-                # print(self.temp_switch.number)
-            # print("Port NO: " + str(port.port_no) + " , HW ADDR: " + str(port.hw_addr))
-            # print(type(port.port_no)) 
-        # print("Switch : " + str(self.temp_switch.number))
+
         print("Switch : " + str(self.temp_switch.number))
         for port in list(self.temp_switch.ports.values()):
             print('Port No: ' + str(port.port_no))
@@ -107,7 +102,6 @@ class Packet_switch(object):
 
 
     def type_hello(self):
-        #print("*******hello*********")
         self.version = int(str(self.msg.header.version))
         pass
     def type_error(self):
@@ -116,23 +110,14 @@ class Packet_switch(object):
         self.in_port = self.msg.in_port
         self.buffer_id = self.msg.buffer_id
         try:
-            # print("Lenght of the packet is : {}".format(str(len(self.msg.data._value))))
             eth = ethernet.Ethernet(self.msg.data._value)
             self.eth_type = eth.type_t
             self.print_result = False 
 
             if self.eth_type == 'ETH_TYPE_IP6':
-                # ATTR list
-                # print("IPv6 with attr: {}".format(str(eth.__dict__.keys())))
-                #(['_lazy_handler_data', '_body_bytes', '_body_changed', '_header_len', '_header_cached', '_header_changed', '_unpacked', '_dst', '_src', '_type'])
-
-                ####### TO GET ATTR FROM PACKETINS #######
-                # print("IPv6 packet's _src: {}".format(str(eth._src)))                                         # == Address in bytes hex
-                # print("IPv6 packet's _unpacked: {}".format(str(eth._unpacked)))                               # == TRUE
-                # print("IPv6 packet's _lazy_handler_data: {}".format(str(eth._lazy_handler_data)))             # class and bytes
-                # print("IPv6 packet's _lazy_handler_data's DATA: {}".format(str(eth._lazy_handler_data[1])))      # A lot of HEX Bytes
-                # print("The lazy handler data length is: {}".format(str(len(eth._lazy_handler_data[1]))))
-
+                ''' ATTR list
+                (['_lazy_handler_data', '_body_bytes', '_body_changed', '_header_len', 
+                 '_header_cached', '_header_changed', '_unpacked', '_dst', '_src', '_type']) '''
                 self.mac_src = eth.src_s
                 self.mac_dst = eth.dst_s
                 self.ip_dst = eth[ip6.IP6].dst_s
@@ -150,12 +135,9 @@ class Packet_switch(object):
                             for porter in list(switcher.ports.values()):
                                 if self.mac_src == porter.hw_addr:
                                     self.networkgraph.add_edge(str(self.temp_switch.number),str(switcher.number))
-                                    break
-                pass
-                
-                
+                                    break            
+                                    
             elif self.eth_type == 'ETH_TYPE_ARP':
-                # print("ARP with attr: {}".format(str(eth.__dict__.keys())))
                 self.mac_src = eth.src_s
                 self.mac_dst = eth.dst_s
                 self.ip_dst = eth[arp.ARP].tpa_s
@@ -165,32 +147,21 @@ class Packet_switch(object):
                 self.mac_src = self.mac_src.lower()
                 self.mac_dst = self.mac_dst.lower()
 
-                ## COOLER IMPLEMENTATION LATER
-                # if self.in_port not in self.temp_switch.ports.keys():
-                #     self.temp_switch.ports[self.in_port] = Port(self)
                 if not self.temp_switch.ports[self.in_port].connected_mac:
                     self.temp_switch.ports[self.in_port].connected_mac = self.mac_src
                 if not self.temp_switch.ports[self.in_port].connected_ip:
                     self.temp_switch.ports[self.in_port].connected_mac = self.ip_src
                 if self.slice_no not in self.temp_switch.ports[self.in_port].list_of_slices:
                     self.temp_switch.ports[self.in_port].list_of_slices.append(self.slice_no)
-                #print("SWITCH{}'s PORT{}'s SLICE LIST: {}".format(str(self.temp_switch.number),str(self.in_port),str(self.temp_switch.ports[self.in_port].list_of_slices)))
 
-                pass
             elif self.eth_type == 'ETH_TYPE_IP4':
-                # print("IP4 with attr: {}".format(str(eth.__dict__.keys())))
                 self.mac_src = eth.src_s
                 self.mac_dst = eth.dst_s
                 self.ip_dst = eth[ip.IP].dst_s
                 self.ip_src = eth[ip.IP].src_s  
                 self.slice_no = int(self.ip_src[0])
-                
-                # if self.in_port not in temp_switch.ports.keys():
-                #     temp_switch.ports[self.in_port] = Port(self.in_port)
-                # temp_switch.ports[self.in_port].update_mac_and_slice_no(self.mac_src)
-                pass
+
             elif self.eth_type == 'ETH_TYPE_IP':
-                # print("WHO THE FUCK??? IP with attr: {} \n".format(str(eth.__dict__.keys())))
                 self.mac_src = eth.src_s
                 self.mac_dst = eth.dst_s
                 self.ip_dst = eth[ip.IP].dst_s
@@ -201,32 +172,17 @@ class Packet_switch(object):
             else:
                 print('This ETH_TYPE is not used: ' + str(self.eth_type))
 
-            # self.slice_no = temp_switch.ports[self.in_port].slice_no
-
         except Exception as e:
             print('EXCEPTION ETH packet parsing: ' + str(e))
     
     def type_features_reply(self):
-        #print("*****Features reply*****")
-        #print("From dpid " + str(self.msg.datapath_id) + " : FEATURES_REPLY")
-        
-        #self.n_buffers=int(str(self.msg.n_buffers))
-        #self.n_tables=int(str(self.msg.n_tables))
-        #self.auxiliary_id=int(str(self.msg.auxiliary_id))
-        #self.capabilities=int(str(self.msg.capabilities))
-        #self.reserved=int(str(self.msg.reserved))
-        
-        #'header', 'datapath_id', 'n_buffers', 'n_tables', 'auxiliary_id', 'pad', 'capabilities', 'reserved'
+        ''' Attributes:'header', 'datapath_id', 'n_buffers', 'n_tables', 'auxiliary_id', 'pad', 'capabilities', 'reserved' '''
         self.dpid = self.msg.datapath_id._value
         self.temp_switch.dpid = str(self.dpid)[-1]
         self.temp_switch.n_buffers=int(str(self.msg.n_buffers))
         self.temp_switch.n_tables=int(str(self.msg.n_tables))
 
-        #self.print_result = True
-        pass
-
     def type_port_status(self):
-        #print("*****port_status*****")
         '''
         reason = self.msg.reason
         port_no = int(str(self.msg.desc.port_no))
@@ -250,7 +206,7 @@ class Packet_switch(object):
     def parse_message(self):
         # Assıgn OF type to self
         self.of_type = self.msg.header.message_type
-        # ıf functıon for thıs OF type exısts then call thıs functıon
+        # If function for this OF type exists then call the appropriate function
         if self.of_type in self.type_to_function.keys():
             self.type_to_function[self.of_type]()
         else:
@@ -266,7 +222,6 @@ class Packet_switch(object):
         print("IP Source : " + str(self.ip_src))
         print("IP Dest : " + str(self.ip_dst) )
         print("Slice : " + str(self.slice_no) )
-        # print("DPID : " + str(self.dpid))
 
 class Packet_controller(object):
     
@@ -322,63 +277,52 @@ class Packet_controller(object):
         pass
 
     def type_flow_mod(self):
-        # print("*************flow mod**************")
-        # msg:  'header', 'cookie', 'cookie_mask', 'table_id', 'command', 'idle_timeout', 
-        #       'hard_timeout', 'priority', #'buffer_id', 'out_port', 'out_group', 'flags', 
-        #       'pad', 'match', 'instructions'
-        # match: 'match_type', 'length', 'oxm_match_fields
-        
-        # instructions[0]: 'instruction_type', 'length', 'pad', 'actions
+        ''' msg:  'header', 'cookie', 'cookie_mask', 'table_id', 'command', 'idle_timeout', 
+                  'hard_timeout', 'priority', #'buffer_id', 'out_port', 'out_group', 'flags', 
+                 'pad', 'match', 'instructions'
+            match: 'match_type', 'length', 'oxm_match_fields
+            instructions[0]: 'instruction_type', 'length', 'pad', 'actions '''
+
         instruction_len = len(self.msg.instructions)
         self.match_field = self.msg.match
         self.msg.cookie = self.source_no
         self.data = self.msg.pack()
-        # print(f'FLOW MOD MESSAGE with a \
-        #       \n msg : {self.msg} \
-        #       \n match field: {self.match_field.__dict__.keys()} \
-        #       \n Match Type: {self.match_field.match_type} \
-        #       \n oxm_match_fields: {self.match_field.oxm_match_fields} \
-        #       \n {self.match_field.oxm_match_fields[0]} \
-        #       \n length: {len(self.raw_msg)}')
         
         if instruction_len == 1:
             action_len = len(self.msg.instructions[0].actions)
             
             if action_len == 1:
                 self.out_port = int(str(self.msg.instructions[0].actions[0].port))
-                # print("flow mod out port (actions[0]): " + str(self.out_port))
             else:
-                print("************flow mod actions length: " + str(action_len))
+                print("!!! Possible error with flow mod message's actions length: " + str(action_len))
                 pass
 
         else:
-            print("************flow mod instructions length  = " + str(instruction_len))
+            print("!!! Possible error with flow mod message's instructions length  = " + str(instruction_len))
             pass
         try:
             self.in_port = int.from_bytes(self.msg.match.get_field(OxmOfbMatchField.OFPXMT_OFB_IN_PORT),"big")
         except Exception as e:
-            print("There is a problem with the last line of flow_mod parsing, exception:{}".format(str(e)))
+            print("!!! There is a problem with the last line of flow_mod parsing, exception:{}".format(str(e)))
         pass
 
     def type_hello(self):
         self.version = int(str(self.msg.header.version))
-        #header: 'version', 'message_type', 'length', 'xid'
-        #msg.elements: []
-        pass
+
     def type_error(self):
-        pass                       
+        pass
+
     def type_packetout(self):
-        #print("********packet out**********")
-        # msg: (['header', 'buffer_id', 'in_port', 'actions_len', 'pad', 'actions', 'data'])
-        # data: '_value', 'enum_ref'
-        # action[0]:'length', 'port', 'action_type', 'max_length', 'pad'
+        ''' msg: (['header', 'buffer_id', 'in_port', 'actions_len', 'pad', 'actions', 'data'])
+            data: '_value', 'enum_ref'
+            action[0]:'length', 'port', 'action_type', 'max_length', 'pad' '''
 
         action_len = len(self.msg.actions)
         self.buffer_id = self.msg.buffer_id
         if action_len == 1:
             self.out_port = int(str(self.msg.actions[0].port))
             if self.out_port == FLOOD_PORT:
-                # print("PACKET_OUT port (actions[0]): FLOOD")
+                # A blocking mechanism skeleton for not allowed ports
                 pass
             else:
                 print("*********PACKET_OUT port (actions[0]): " + str(self.out_port))
@@ -386,14 +330,13 @@ class Packet_controller(object):
             print("**********PACKET_OUT actions length: " + str(action_len))
             pass
         
-
     def parse_message(self):
         self.print_result = False
-        # assıgn OF packet type to self
+        # assign OF packet type to self
         self.of_type = self.msg.header.message_type
-        # check if we have a functıon for thıs type OF message
+        # check if we have a function for this type OF message
         if self.of_type in self.type_to_function.keys():
-            # call functıon ıf ıt exısts
+            # call function if it exists
             self.type_to_function[self.of_type]()
         else:
             print("OPenflow Message Type " + str(self.of_type) + " Not in Dict")
