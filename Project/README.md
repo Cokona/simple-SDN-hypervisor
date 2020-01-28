@@ -8,6 +8,21 @@ for the lecture Software Defined Networking class at the Technical University of
     Yash Deshpande  - yash.deshpande@tum.de
 
     Duan Shen       - duan.shen@tum.de
+    
+**HOW TO RUN**
+
+The runner has to be run with python3 from inside the Project directory. The user needs to add a number of controllers and a number of switches seperated with spaces. 
+These numbers need to be according to the created topologies in the Topologies folder. The number of Controllers momentarily ranges between 1-4 and the number of switches between 1-7. 
+One can easily add more topologies by changing:in the beginning of the topology scripts and saving them as new files accordingly.
+* no_of_slices    = x
+* no_of_switches  = y
+
+```
+python3 Hypervisor/runner.py x y
+```
+e.g. python3 Hypervisor/runner.py 2 3
+    
+**Description**    
 
 A general description for the project can be found in the Project Report pdf.
 
@@ -38,25 +53,13 @@ been assigned to the flows.
 The folder Tester includes a TCP client and TCP server application, found online, to run through the host xterms to visualise the demonstration of the hypervisor.
 
 
-**HOW TO RUN**
-
-The runner has to be run with python3 from inside the Project directory. The user needs to add a number of controllers and a number of switches seperated with spaces. 
-These numbers need to be according to the created topologies in the Topologies folder. The number of Controllers momentarily ranges between 1-4 and the number of switches between 1-7. 
-One can easily add more topologies by changing:in the beginning of the topology scripts and saving them as new files accordingly.
-* no_of_slices    = x
-* no_of_switches  = y
-
-```
-python3 Hypervisor/runner.py x y
-```
-e.g. python3 Hypervisor/runner.py 2 3
-
 **Parameters**
 
 Parameters that can be set are:
 * the idle_timeout: time for the controller created flows. This can be done inside the simple_switch_13.py script. It is also possible to use one's own controller by changing the runner.py file. Here also the allocated listening TCP ports can be changed, as long as they are also changed inside the Hypervisor.py. This is defined in the beginning of the script.
 * The FLOW_ENTRY_MAX: which is located in the first lines of the Hypervisor.py. This is the per controller allowed number of Flow rule entries per switch
 
+**Setup**
 
 The used setup was as follows, one might need to install the necessary python packets.
 * The Hypervisor has been written using Python 3.7.4. 
