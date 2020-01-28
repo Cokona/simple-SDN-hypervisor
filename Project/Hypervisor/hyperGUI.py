@@ -9,17 +9,13 @@ from matplotlib.figure import Figure
 
 class Gui(object):
     def __init__(self, master, queue, graphqueue, number_of_slices, number_of_switches, switches, flow_entry_max):
-        #test value
-        #self.ports = "1,2,3"
-
         self.queue = queue
         self.graphqueue = graphqueue
         self.graphtopo = None
-        self.switches = switches #list of SWITCHes
+        self.switches = switches                #list of Switches
         self.n_slices = number_of_slices
         self.n_switches = number_of_switches
         self.flow_entry_max = flow_entry_max
-    
 
         self.window = master
         self.window.title("SDN hypervisor API")
@@ -27,13 +23,11 @@ class Gui(object):
 
         self.frame = Frame(self.window)
         self.frame.pack(fill="both")
-
         self.tablayout = Notebook(self.frame)
 
         self.tab1 = Frame(self.tablayout)
         self.tab2 = Frame(self.tablayout)
         self.tab3 = Frame(self.tablayout)
-
         self.create_tab_1()
         self.create_tab_2()
         self.create_tab_3()
@@ -46,8 +40,6 @@ class Gui(object):
             try:
                 self.switches = self.queue.get(0)
                 # Check contents of message and do what it says
-                # As a test, we simply print it
-                #print(self.switches)
                 self.update_refresh()
             except queue.Empty:
                 pass
@@ -65,10 +57,8 @@ class Gui(object):
             except queue.Empty:
                 pass
 
-
     def update_graph(self):
         f = plt.figure(figsize=(5,5),dpi=100)
-        # f.add_subplot(122)
         nx.draw(self.graphtopo, with_labels=True)
         canvas = FigureCanvasTkAgg(f,master=self.tab1)
         canvas.draw()
@@ -76,33 +66,18 @@ class Gui(object):
         
         self.window.update()
 
-        pass
-
-
     def update(self):
-        #print("Called update")
         self.window.update()
         #self.window.after(500, refresh)
 
     def update_refresh(self):
-        # print("update")
-        #label1.configure(text='Balance :$' + str(max_amount))
-        # self.window.update()
-        #self.window.after(500, refresh)
-        #print("Update Refresh Called")
         for slicer in range(1,self.n_slices+1):
             self.insert_slice_rows(slicer)
-        #print("Slices Inserted")
         self.window.update()
-        #print("Window Updated")
-        pass
 
     def test_change_value(self):
         self.ports = "a,b,c"
-        # print(self.ports)
-        pass
     
-
     def getValue(self):
         pass
 
@@ -115,16 +90,12 @@ class Gui(object):
 
     def create_tab_1(self):
         # tab1
-
         self.tab1.pack(fill="both")
         self.tablayout.add(self.tab1, text="Network Topology")
-
-
 
     def create_tab_2(self):
         # tab2
         self.tab2.pack(fill="both")
-
 
         #adding table into tab2
         label_sl_sw = Label(self.tab2, text="Slice \ Switch", bg="#0059b3", fg="white", padx=3,pady=3) #, anchor = "n"
@@ -139,8 +110,6 @@ class Gui(object):
             label_sw.grid(row=0, column=col+1, sticky="nsew", columnspan=1,rowspan=1, padx=1, pady=(1,3))
             self.tab2.grid_columnconfigure(col+1, weight=1)
         
-        
-
         for slicer in range(1,self.n_slices+1):
             label_slice = Label(self.tab2, text="Slice " + str(slicer), bg="#0059b3", fg="white", padx=3, pady=3)
             label_slice.config(font=('Arial', 12))
@@ -157,12 +126,7 @@ class Gui(object):
             label_n_flows.grid(row=2 * (slicer - 1) + 2, column=1, sticky="nsew", columnspan=1, rowspan=1,
                             padx=1, pady=(1, 3))
 
-            # label_maxflows = Label(self.tab2, text="max flow entries", bg="white", fg="black", padx=3, pady=3)
-            # label_maxflows.config(font=('Arial', 12))
-            # label_maxflows.grid(row=2 + 3 * (slicer - 1), column=1, sticky="nsew", columnspan=1, rowspan=1,
-            #                     padx=1, pady=1)
             self.insert_slice_rows(slicer)
-            pass
 
         rows = 1 + 3 * self.n_slices
 
@@ -170,17 +134,10 @@ class Gui(object):
         update_bt.grid(row=rows+1, column=0, sticky="nsew", columnspan=1,rowspan=1, padx=1, pady=(1,3))
         self.tablayout.add(self.tab2,text="Slice informantion")
 
-        
-
-
-
-
-
     def insert_slice_rows(self, slicer):  # slice_no = 1, 2, 3, ...
         '''
         for each slice, insert it rows of ports, max flow entries and #flow entries, for each switch
         '''
-        
 
         for col in range(2, 2 + self.n_switches):
             label_cell_port = Label(self.tab2, text= "", bg="white", fg="black", padx=3, pady=3)
@@ -206,33 +163,24 @@ class Gui(object):
                     else:
                         pass
             
-
-                
-            
             label_cell_port.config(text = str(text_port))
             label_cell_port.grid(row=2 * (slicer - 1) + 1, column=col, sticky="nsew", columnspan=1, rowspan=1,
                             padx=1, pady=1)
 
             label_cell_no_flow.config(text = str(text_flow))
             
-
             if text_flow == self.flow_entry_max:
                 label_cell_no_flow.config(fg = "red")
 
             label_cell_no_flow.grid(row=2 * (slicer - 1) + 2, column=col, sticky="nsew", columnspan=1, rowspan=1,
                             padx=1, pady=(1, 3))
             
-
-            
-
-
     def create_tab_3(self):
         #tab3
         #tab3=Frame(self.tablayout)
         self.tab3.pack(fill="both")
 
         #adding table into tab
-
         #input box Table
         for row in range(5):
             for column in range(6):
@@ -249,8 +197,4 @@ class Gui(object):
         self.tablayout.add(self.tab3,text="Switch Statistics")
 
         self.tablayout.pack(fill="both")
-
-
-# gui = Gui(2,3,0)
-# gui.mainloop()
 

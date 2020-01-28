@@ -2,18 +2,20 @@ import socket
 import select
 import time
 import sys
-from helpers import Switch, Slice
+import queue
+import threading
+import matplotlib.pyplot as plt
+from tkinter import *
+
 import pyof
 from pyof.v0x04.common.utils import unpack_message
 from pyof.v0x04.common.header import Header, Type
-from hyper_parser_kimon import Packet_controller, Packet_switch
-import queue
-from tkinter import *
-from yash_gui_test import Gui
-import threading
-import networkx as nx
-import matplotlib.pyplot as plt
+from networkx import DiGraph
 from networkx.drawing.nx_agraph import graphviz_layout, to_agraph
+
+from hyperGUI import Gui
+from hyper_parser import Packet_controller, Packet_switch
+from hyperobjects import Switch, Slice
 
 
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
@@ -24,13 +26,15 @@ delay = 0.00002
 number_of_controllers = int(sys.argv[1])
 number_of_switches =  int(sys.argv[2])
 
+FLOW_ENTRY_MAX = 20
+
 controller_addresses = []
-
-FLOOD_PORT = 4294967291
-
 for i in range(number_of_controllers):
     controller_addresses.append(('127.0.0.1', 6633 + i))
 hypervisor_address = ('127.0.0.1', 65432)
+
+FLOOD_PORT = 4294967291
+
 
 class Forward:
     '''
@@ -56,7 +60,7 @@ class TheServer:
         self.queue = queue.Queue()
         self.number_of_controllers = number_of_controllers
         self.number_of_switches = number_of_switches
-        self.flow_entry_max = 100
+        self.flow_entry_max = FLOW_ENTRY_MAX
         self.input_list = []
         self.switch_sockets = []
         self.controller_sockets = []
@@ -68,7 +72,7 @@ class TheServer:
         self.mac_add = []
         self.conn_tuples = []
         self.temp_switch = None
-        self.networkgraph = nx.DiGraph()
+        self.networkgraph = DiGraph()
         self.graphqueue = queue.Queue()
         self.graphcall_flag = False
         
@@ -76,23 +80,15 @@ class TheServer:
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind((host, port))
-        self.server.listen(200)     # !NOTE Reconsider 200
+        self.server.listen(200)
         self.gui = Gui(self.master, self.queue,self.graphqueue,self.number_of_controllers,self.number_of_switches,self.proxy_port_switch_dict.values(),self.flow_entry_max)
         self.periodicCall()
-        # time.sleep(2000)
-        # self.graphCall()
+
         
     def periodicCall(self):
         """
         Check every 5 s if there is something new in the queue.
         """
-        # # # # A = to_agraph(self.networkgraph)
-        # # # # A.layout('dot')
-        # # # # A.draw('abcd.png')
-        
-        #plt.show()
-        # print(self.networkgraph.nodes)
-        # print(self.networkgraph.edges)
         switch_list = list(self.proxy_port_switch_dict.values())
         switch_list.sort(key=lambda x : int(x.dpid), reverse=False)
         self.queue.put(switch_list)
@@ -106,18 +102,6 @@ class TheServer:
 
         self.graphqueue.put(self.networkgraph)
         self.gui.processTopology()
-
-        #nx.draw_networkx(self.networkgraph,with_labels=True)
-        #plt.draw()
-        #plt.savefig('TopoC',dpi=100)
-        # # print(self.networkgraph.nodes)
-        # # print(self.networkgraph.edges)
-        # print("Graph Called")
-        # self.graphqueue.put(self.networkgraph)
-        # self.gui.processTopology()
-        # self.master.after(20000, self.graphCall)
-        # print("Out of graphh CALL")
-
 
     def main_loop(self):
         self.input_list.append(self.server)
@@ -196,9 +180,11 @@ class TheServer:
                 #                                                     str(self.temp_switch.number),str(slice_no),str(packet_info.of_type)))
             else:
                 if packet_info.of_type is Type.OFPT_FLOW_REMOVED:    # special case of Flow-Removed
-                    check_for_flow_remove_flag = self.update_counters(self, packet_info)
-                    if check_for_flow_remove_flag[0]:
-                        self.channels[check_for_flow_remove_flag[1]-1][self.s].send(data)
+                    for packet_temp in packet_info.multiple_message_list:
+                        packet_temp_slice = packet_temp.cookie
+                        self.update_counters(packet_info, int(str(packet_temp.cookie)))
+                        data = packet_temp.pack()
+                        self.channels[packet_temp_slice-1][self.s].send(data)
 
                 else:
                     if packet_info.eth_type != 'ETH_TYPE_IP6':
@@ -229,7 +215,9 @@ class TheServer:
                         flag_to_drop_buf_id = self.check_for_duplicate_buf_id(packet_info)
                         if flag_to_drop_common is None:
                             if not flag_to_drop_buf_id:
-                                if self.update_counters(packet_info,controller_id=controller_id):
+                                if self.update_counters(packet_info, controller_id):
+                                    if packet_info.of_type is Type.OFPT_FLOW_MOD:               # Special case flow mod
+                                        data = packet_info.data     
                                     self.channels[i][self.s].send(data)
                                     # print('Src:  Controller{},  Dst:  SWITCH{},  type: {}'.format(
                                     #         str(controller_id),str(self.temp_switch.number),str(packet_info.of_type)))
@@ -287,9 +275,9 @@ class TheServer:
 
     def update_counters(self, packet_info,controller_id=None):
         if packet_info.of_type is Type.OFPT_FLOW_MOD:
-            return self.temp_switch.flow_add(packet_info,controller_id)
+            return self.temp_switch.flow_add(packet_info, controller_id)
         elif packet_info.of_type is Type.OFPT_FLOW_REMOVED:
-            return self.temp_switch.flow_remove(packet_info)
+            self.temp_switch.flow_remove(packet_info, controller_id)
         else:
             return True
 
