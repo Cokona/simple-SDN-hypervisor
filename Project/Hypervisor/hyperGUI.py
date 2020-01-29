@@ -27,10 +27,12 @@ class Gui(object):
 
         self.tab1 = Frame(self.tablayout)
         self.tab2 = Frame(self.tablayout)
-        self.tab3 = Frame(self.tablayout)
+        #self.tab3 = Frame(self.tablayout)
         self.create_tab_1()
         self.create_tab_2()
-        self.create_tab_3()
+        #self.create_tab_3()
+        
+        self.tablayout.pack(fill="both")
         
     def processIncoming(self):
         """
@@ -196,5 +198,5 @@ class Gui(object):
 
         self.tablayout.add(self.tab3,text="Switch Statistics")
 
-        self.tablayout.pack(fill="both")
+        
 
