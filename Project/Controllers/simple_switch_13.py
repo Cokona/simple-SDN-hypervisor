@@ -22,7 +22,7 @@ from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
 from ryu.lib.packet import ether_types
 
-timeout_parameter = 30
+timeout_parameter = 20
 
 
 class SimpleSwitch13(app_manager.RyuApp):

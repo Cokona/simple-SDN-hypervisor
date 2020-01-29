@@ -21,12 +21,12 @@ from hyperobjects import Switch, Slice
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
 # But when buffer get to high or delay go too down, you can broke things
 buffer_size = 1024
-delay = 0.00002
+delay = 0.00005
 
 number_of_controllers = int(sys.argv[1])
 number_of_switches =  int(sys.argv[2])
 
-FLOW_ENTRY_MAX = 20
+FLOW_ENTRY_MAX = 100
 
 controller_addresses = []
 for i in range(number_of_controllers):
@@ -97,7 +97,7 @@ class TheServer:
 
     def graphCall(self):
         """
-        Check every 20 s if there is something new in the graphqueue.
+        Check after the first 20 s if there is something new in the graphqueue.
         """
 
         self.graphqueue.put(self.networkgraph)

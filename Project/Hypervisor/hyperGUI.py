@@ -52,8 +52,6 @@ class Gui(object):
             try:
                 self.graphtopo = self.graphqueue.get(0)
                 self.update_graph()
-                print(self.graphtopo.nodes)
-                print(self.graphtopo.edges)
             except queue.Empty:
                 pass
 
@@ -63,7 +61,6 @@ class Gui(object):
         canvas = FigureCanvasTkAgg(f,master=self.tab1)
         canvas.draw()
         canvas.get_tk_widget().pack(side=TOP,fill=BOTH,expand=1)
-        
         self.window.update()
 
     def update(self):
