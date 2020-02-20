@@ -1,4 +1,0 @@
-http://voorloopnul.com/blog/a-python-proxy-in-less-than-100-lines-of-code/
-
-
-https://gist.github.com/darkwave/52842722c0c451807df4
