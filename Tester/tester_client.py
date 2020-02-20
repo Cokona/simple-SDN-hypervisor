@@ -1,3 +1,6 @@
+'''
+Source: https://github.com/furas/python-examples/tree/master/pygame/socket-send-receive-image
+'''
 import pygame
 from threading import Thread
 import socket
